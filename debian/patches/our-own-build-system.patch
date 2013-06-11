@@ -1,0 +1,281 @@
+From: Alexandros Kosiaris <akosiaris@wikimedia.org>
+Date: Tue, 28 May 2013 17:46:15 +0000
+Subject: Introducing our own build system
+
+Introducing our own build system for the kafka project based on
+calling scalac and a set of simple Makefiles. Will compile per
+directory {core, perf, examples, contrib}, install configuration
+files and depend on either system provided JAR libraries or the
+ones shipped in ext/. Install targets by default go to
+/usr/local/share/java, packaging system will probably override that.
+It supports PREFIX, DESTDIR, SYSCONFDIR.
+CLASSPATH variable is meant to be overriden more by the caller. Some
+sane defaults are discovered but they should not be relied on too much.
+The version discovery system is rather naive and will fail in many
+cases to correctly identify the version. Since this is not trivial to
+fix we allow the caller to override version.
+---
+ Makefile                         |   66 ++++++++++++++++++++++++++++++++++++++
+ config/Makefile                  |    9 ++++++
+ contrib/Makefile                 |   23 +++++++++++++
+ contrib/hadoop-consumer/Makefile |   20 ++++++++++++
+ contrib/hadoop-producer/Makefile |   20 ++++++++++++
+ core/Makefile                    |   20 ++++++++++++
+ examples/Makefile                |   19 +++++++++++
+ perf/Makefile                    |   20 ++++++++++++
+ 8 files changed, 197 insertions(+)
+ create mode 100644 Makefile
+ create mode 100644 config/Makefile
+ create mode 100644 contrib/Makefile
+ create mode 100644 contrib/hadoop-consumer/Makefile
+ create mode 100644 contrib/hadoop-producer/Makefile
+ create mode 100644 core/Makefile
+ create mode 100644 examples/Makefile
+ create mode 100644 perf/Makefile
+
+diff --git a/Makefile b/Makefile
+new file mode 100644
+index 0000000..b2a9961
+--- /dev/null
++++ b/Makefile
+@@ -0,0 +1,66 @@
++export SCALAC=scalac
++export JAVAC=javac
++export MKDIR_P=mkdir -p
++export RM_RF=rm -rf
++export JAR=jar
++export INSTALL=install -D -m 644
++
++# Figure this out as well as other dependencies
++export SCALA_LIBRARY=/usr/share/java/scala-library-2.9.1.jar
++
++# DESTDIR
++ifndef PREFIX
++export PREFIX=/usr/local
++endif
++ifndef SYSCONFDIR
++export SYSCONFDIR=/usr/local/etc/kafka
++endif
++export LIBPATH=$(PREFIX)/share/kafka
++export DESTDIR
++
++# Release specifics
++tag=$(shell git describe --abbrev=0)
++ver=$(shell echo $(tag) | sed -e 's/kafka-//' -e 's/-incubating-candidate-[0-9]//')
++ifndef VERSION
++export VERSION=$(ver)
++endif
++
++# This is a fallback in case CLASSPATH is not defined by the caller
++# It will find and add to the CLASSPATH variable all jars in $(PREFIX)/usr/share
++# Hopefully CLASSPATH will be defined and this will be unused
++SYS_CLASSDIR:=$(PREFIX)/share/java
++SYS_CLASSJARS:=$(shell find $(SYS_CLASSDIR) -name "*.jar")
++export SYS_CLASSPATH:=$(shell echo $(SYS_CLASSJARS) | sed -e 's/ /:/g')
++
++# Same here, just this is done for the shipped jar dependencies. 
++EXT_CLASSDIR:=$(CURDIR)/ext
++EXT_CLASSJARS:=$(shell find $(EXT_CLASSDIR) -name "*.jar")
++export EXT_CLASSPATH:=$(shell echo $(EXT_CLASSJARS) | sed -e 's/ /:/g')
++
++ifndef CLASSPATH
++export CLASSPATH=$(SYS_CLASSPATH):$(EXT_CLASSPATH)
++endif
++export CFLAGS=-usejavacp
++
++SUBDIRS=core examples contrib perf config
++
++BUILDDIRS=$(SUBDIRS:%=build-%)
++CLEANDIRS=$(SUBDIRS:%=clean-%)
++INSTALLDIRS=$(SUBDIRS:%=install-%)
++
++all:	$(BUILDDIRS)
++
++install:	all $(INSTALLDIRS)
++
++clean:	$(CLEANDIRS)
++
++$(BUILDDIRS): $(TARGET_PATH)
++	$(MAKE) -C $(@:build-%=%) all
++
++$(CLEANDIRS): $(TARGET_PATH)
++	$(MAKE) -C $(@:clean-%=%) clean
++
++$(INSTALLDIRS): $(TARGET_PATH)
++	$(MAKE) -C $(@:install-%=%) install
++
++.PHONY: clean install all
+diff --git a/config/Makefile b/config/Makefile
+new file mode 100644
+index 0000000..211f667
+--- /dev/null
++++ b/config/Makefile
+@@ -0,0 +1,9 @@
++CONFFILES=consumer.properties log4j.properties producer.properties server.properties zookeeper.properties
++
++all:	
++
++clean:
++
++install:	all
++	$(MKDIR_P) $(DESTDIR)/$(SYSCONFDIR)
++	$(INSTALL) -o root -g root $(CONFFILES) $(DESTDIR)/$(SYSCONFDIR)
+diff --git a/contrib/Makefile b/contrib/Makefile
+new file mode 100644
+index 0000000..c214ca3
+--- /dev/null
++++ b/contrib/Makefile
+@@ -0,0 +1,23 @@
++SUBDIRS=hadoop-consumer hadoop-producer
++BUILDDIRS=$(SUBDIRS:%=build-%)
++CLEANDIRS=$(SUBDIRS:%=clean-%)
++INSTALLDIRS=$(SUBDIRS:%=install-%)
++
++export CORE_TARGET_PATH=$(dir $(CURDIR))core/target
++
++.PHONY: all install clean
++
++all:	$(BUILDDIRS)
++install:	$(INSTALLDIRS) all
++clean:	$(CLEANDIRS)
++
++
++$(BUILDDIRS): $(TARGET_PATH)
++	$(MAKE) -C $(@:build-%=%) all
++
++$(CLEANDIRS): $(TARGET_PATH)
++	$(MAKE) -C $(@:clean-%=%) clean
++
++$(INSTALLDIRS): $(TARGET_PATH)
++	$(MAKE) -C $(@:install-%=%) install
++
+diff --git a/contrib/hadoop-consumer/Makefile b/contrib/hadoop-consumer/Makefile
+new file mode 100644
+index 0000000..b13c8c7
+--- /dev/null
++++ b/contrib/hadoop-consumer/Makefile
+@@ -0,0 +1,20 @@
++SOURCES=$(shell find -name "*.java")
++
++LIB_CLASSJARS:=$(shell find lib -name "*.jar")
++TARGET_PATH=$(CURDIR)/target
++CLASSPATH:=$(CLASSPATH):$(SCALA_LIBRARY):$(LIB_CLASSJARS):$(CORE_TARGET_PATH)
++
++$(TARGET_PATH):
++	$(MKDIR_P) $(TARGET_PATH)
++
++all:	$(SOURCES) $(TARGET_PATH)
++	$(JAVAC) -d $(TARGET_PATH) $(SOURCES)
++
++clean:
++	$(RM_RF) $(TARGET_PATH)
++	$(RM_RF) hadoop-consumer-$(VERSION).jar
++
++install:	all
++	$(JAR) cfv hadoop-consumer-$(VERSION).jar -C target .
++	$(INSTALL) -o root -g root hadoop-consumer-$(VERSION).jar $(DESTDIR)$(LIBPATH)/hadoop-consumer-$(VERSION).jar
++
+diff --git a/contrib/hadoop-producer/Makefile b/contrib/hadoop-producer/Makefile
+new file mode 100644
+index 0000000..0e9b2ae
+--- /dev/null
++++ b/contrib/hadoop-producer/Makefile
+@@ -0,0 +1,20 @@
++SOURCES=$(shell find -name "*.java")
++
++LIB_CLASSJARS:=$(shell find lib -name "*.jar")
++TARGET_PATH=$(CURDIR)/target
++CLASSPATH:=$(CLASSPATH):$(SCALA_LIBRARY):$(LIB_CLASSJARS):$(CORE_TARGET_PATH)
++
++$(TARGET_PATH):
++	$(MKDIR_P) $(TARGET_PATH)
++
++all:	$(SOURCES) $(TARGET_PATH)
++	$(JAVAC) -d $(TARGET_PATH) $(SOURCES)
++
++clean:
++	$(RM_RF) $(TARGET_PATH)
++	$(RM_RF) hadoop-producer-$(VERSION).jar
++
++install:	all
++	$(JAR) cfve hadoop-producer-$(VERSION).jar kafka.bridge.examples.TextPublisher -C target .
++	$(INSTALL) -o root -g root hadoop-producer-$(VERSION).jar $(DESTDIR)$(LIBPATH)/hadoop-producer-$(VERSION).jar
++
+diff --git a/core/Makefile b/core/Makefile
+new file mode 100644
+index 0000000..7441725
+--- /dev/null
++++ b/core/Makefile
+@@ -0,0 +1,20 @@
++SOURCES=$(shell find src/main -name "*.scala" -or -name "*.java")
++JAVA_SOURCES=$(shell find src/main -name "*.java")
++
++TARGET_PATH=$(CURDIR)/target
++CLASSPATH:=$(CLASSPATH):$(TARGET_PATH)
++
++$(TARGET_PATH):
++	$(MKDIR_P) $(TARGET_PATH)
++
++all:	$(SOURCES) $(TARGET_PATH)
++	$(SCALAC) $(CFLAGS) -d $(TARGET_PATH) $(SOURCES)
++	$(JAVAC) -d $(TARGET_PATH) $(JAVA_SOURCES)
++
++clean:
++	$(RM_RF) $(TARGET_PATH)
++	$(RM_RF) kafka-$(VERSION).jar
++
++install:
++	$(JAR) cfv kafka-$(VERSION).jar -C target .
++	$(INSTALL) -o root -g root kafka-$(VERSION).jar $(DESTDIR)$(LIBPATH)/kafka-$(VERSION).jar
+diff --git a/examples/Makefile b/examples/Makefile
+new file mode 100644
+index 0000000..8d5e751
+--- /dev/null
++++ b/examples/Makefile
+@@ -0,0 +1,19 @@
++SOURCES=$(shell find -name "*.java")
++
++TARGET_PATH=$(CURDIR)/target
++CORE_TARGET_PATH=$(dir $(CURDIR))core/target
++CLASSPATH:=$(CLASSPATH):$(SCALA_LIBRARY):$(CORE_TARGET_PATH)
++
++$(TARGET_PATH):
++	$(MKDIR_P) $(TARGET_PATH)
++
++all:	$(SOURCES) $(TARGET_PATH)
++	$(JAVAC) -d $(TARGET_PATH) $(SOURCES)
++
++clean:
++	$(RM_RF) $(TARGET_PATH)
++	$(RM_RF) kafka-java-examples-$(VERSION).jar
++
++install:	all
++	$(JAR) cfv kafka-java-examples-$(VERSION).jar -C target .
++	$(INSTALL) -o root -g root kafka-java-examples-$(VERSION).jar $(DESTDIR)$(LIBPATH)/kafka-java-examples-$(VERSION).jar
+diff --git a/perf/Makefile b/perf/Makefile
+new file mode 100644
+index 0000000..daeea0d
+--- /dev/null
++++ b/perf/Makefile
+@@ -0,0 +1,20 @@
++SOURCES=$(shell find -name "*.scala" -or -name "*.java")
++
++TARGET_PATH=$(CURDIR)/target
++
++CORE_TARGET_PATH=$(dir $(CURDIR))core/target
++CLASSPATH:=$(CLASSPATH):$(CORE_TARGET_PATH)
++
++$(TARGET_PATH):
++	$(MKDIR_P) $(TARGET_PATH)
++
++all:	$(SOURCES) $(TARGET_PATH)
++	$(SCALAC) $(CFLAGS) -d $(TARGET_PATH) $(SOURCES)
++
++clean:
++	$(RM_RF) $(TARGET_PATH)
++	$(RM_RF) kafka-perf-$(VERSION).jar
++
++install:	all
++	$(JAR) cfv kafka-perf-$(VERSION).jar -C target .
++	$(INSTALL) -o root -g root kafka-perf-$(VERSION).jar $(DESTDIR)$(LIBPATH)/kafka-perf-$(VERSION).jar
+-- 

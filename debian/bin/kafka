@@ -1,0 +1,185 @@
+#!/bin/sh
+
+# kafka
+# Wrapper script for Kafka executable classes.
+# This script is a single replacement for the
+# shell scripts shipped with Kafka source bin/
+# directory.
+#
+
+SCRIPT_NAME=$(basename "$0")
+KAFKA_CONFIG=${KAFKA_CONFIG:-/etc/kafka}
+
+USAGE="Usage:
+
+$SCRIPT_NAME <command> [opts]
+Run $SCRIPT_NAME <command> with zero arguments/options to see command usage.
+
+Commands:
+  $SCRIPT_NAME server-start              <server.properties> (Default: $KAFKA_CONFIG/server.properties)
+  $SCRIPT_NAME server-stop
+  $SCRIPT_NAME console-producer          [opts]
+  $SCRIPT_NAME console-consumer          [opts]
+  $SCRIPT_NAME producer-shell            [opts]
+  $SCRIPT_NAME producer-perf-test        [opts]
+  $SCRIPT_NAME replay-log-producer       [opts]
+  $SCRIPT_NAME simple-consumer-shell     [opts]
+  $SCRIPT_NAME simple-consumer-perf-test [opts]
+  $SCRIPT_NAME zookeeper-start           <zookeeper.properties> (Default: $KAFKA_CONFIG/zookeeper.properties)
+  $SCRIPT_NAME zookeeper-stop
+  $SCRIPT_NAME zookeeper-shell           [opts]
+
+Environment Variables:
+  KAFKA_CONFIG - location of Kafka config files.  Default: /etc/kafka
+  JMX_PORT     - Set this to expose JMX.  This is set by default for brokers and producers.
+
+NOTE:  the *-start and *-stop commands should not be used for production.  They
+are maintained here as they can be helpful for debugging and troubleshooting new
+Kafka Broker setups.
+
+"
+
+usage() { echo "${USAGE}"; }
+
+
+# Builds CLASSPATH and execs $1 as a java class.
+kafka_run_class() {
+    if [ $# -lt 1 ]; then
+      echo "USAGE: $0 classname [opts]"
+      exit 1
+    fi
+
+    # if these were not yet set (by user or defaults file),
+    # then go ahead and set them.
+    if [ -z "$KAFKA_JMX_OPTS" ]; then
+        KAFKA_JMX_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false  -Dcom.sun.management.jmxremote.ssl=false "
+    fi
+    if [ -n "$JMX_PORT" ]; then
+        KAFKA_JMX_OPTS="$KAFKA_JMX_OPTS -Dcom.sun.management.jmxremote.port=$JMX_PORT "
+    fi
+
+    if [ -z "$KAFKA_OPTS" ]; then
+        KAFKA_OPTS="-Xmx512M -server  -Dlog4j.configuration=file:$KAFKA_CONFIG/log4j.properties"
+    fi
+
+    if [ -z "$JAVA_HOME" ]; then
+        JAVA="java"
+    else
+        JAVA="$JAVA_HOME/bin/java"
+    fi
+
+    # Setting the classpath to all the needed dependencies.
+    CLASSPATH=$CLASSPATH:/usr/share/java/scala-library.jar:/usr/share/java/jetty.jar:/usr/share/java/jetty-util.jar:/usr/share/java/zookeeper.jar:/usr/share/java/velocity-1.7.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/servlet-api-2.5.jar:/usr/share/java/jsp-api-2.1.jar:/usr/share/java/qdox.jar:/usr/share/java/paranamer.jar:/usr/share/java/oro.jar:/usr/share/java/objenesis.jar:/usr/share/java/log4j-1.2-1.2.16.jar:/usr/share/java/junit4.jar:/usr/share/java/joda-time.jar:/usr/share/java/jets3t.jar:/usr/share/java/jackson-core.jar:/usr/share/java/jackson-mapper.jar:/usr/share/java/hsqldb.jar:/usr/share/java/commons-cli.jar:/usr/share/java/commons-codec.jar:/usr/share/java/commons-collections.jar:/usr/share/java/commons-compress.jar:/usr/share/java/commons-el.jar:/usr/share/java/commons-httpclient.jar:/usr/share/java/commons-io.jar:/usr/share/java/commons-lang.jar:/usr/share/java/commons-logging.jar:/usr/share/java/commons-net.jar:/usr/share/java/cglib.jar:/usr/share/java/asm3.jar:/usr/share/java/snappy-java-1.0.4.1.jar:/usr/share/java/jasper-runtime-5.5.12.jar:/usr/share/java/jsp-api-2.1-6.1.14.jar:/usr/share/java/avro-1.4.0.jar:/usr/share/java/kfs-0.3.jar:/usr/share/java/jsp-2.1-6.1.14.jar:/usr/share/java/scalatest-1.2.jar:/usr/share/java/paranamer-ant-2.2.jar:/usr/share/java/paranamer-generator-2.2.jar:/usr/share/java/pig-0.8.0.jar:/usr/share/java/zkclient-20120522.jar:/usr/share/java/easymock-3.0.jar:/usr/share/java/jasper-compiler-5.5.12.jar:/usr/share/java/hadoop-core-0.20.2.jar:/usr/share/java/xmlenc-0.52.jar:/usr/share/java/jopt-simple-3.2.jar:/usr/share/kafka/kafka.jar:/usr/share/kafka/hadoop-consumer.jar:/usr/share/kafka/hadoop-producer.jar:/usr/share/kafka/kafka-kafka-examples.jar:/usr/share/kafka/kafka-perf.jar:/usr/share/java/metrics-annotation-3.0.0-c0c8be71.jar:/usr/share/java/metrics-core-3.0.0-c0c8be71.jar
+
+    # echo $JAVA $KAFKA_OPTS $KAFKA_JMX_OPTS -cp $CLASSPATH $@
+    $JAVA $KAFKA_OPTS $KAFKA_JMX_OPTS -cp $CLASSPATH $@
+}
+
+
+cmd_server_start() {
+    # default server.properties to $KAFKA_CONFIG/server.properties
+    server_properties=${1:-${KAFKA_CONFIG}/server.properties}
+
+    export JMX_PORT=${JMX_PORT:-9999}
+    kafka_run_class kafka.Kafka "${server_properties}"
+}
+
+cmd_server_stop() {
+    ps ax | grep -i 'kafka.Kafka' | grep -v grep | awk '{print $1}' | xargs kill -SIGINT
+}
+
+cmd_zookeeper_start() {
+    # default zookeeper.properties to $KAFKA_CONFIG/zookeeper.properties
+    export JMX_PORT=${JMX_PORT:-9998}
+    zookeeper_properties=${1:-${KAFKA_CONFIG}/zookeeper.properties}
+    kafka_run_class org.apache.zookeeper.server.quorum.QuorumPeerMain ${zookeeper_properties}
+}
+
+cmd_zookeeper_stop() {
+    ps ax | grep -i 'zookeeper' | grep -v grep | awk '{print $1}' | xargs kill -SIGINT
+}
+
+cmd_console_consumer() {
+    export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/kafka-console-consumer-log4j.properties"
+    kafka_run_class kafka.consumer.ConsoleConsumer $@
+}
+
+cmd_console_producer() {
+    export JMX_PORT=${JMX_PORT:-9990}
+    kafka_run_class kafka.producer.ConsoleProducer $@
+}
+
+cmd_consumer_shell() {
+    kafka_run_class kafka.tools.ConsumerShell $@
+}
+
+cmd_producer_shell() {
+    export JMX_PORT=${JMX_PORT:-9991}
+    kafka_run_class kafka.tools.ProducerShell $@
+}
+
+cmd_simple_consumer_shell() {
+    kafka_run_class kafka.tools.SimpleConsumerShell $@
+}
+
+cmd_consumer_perf_test() {
+    kafka_run_class kafka.perf.ConsumerPerformance $@
+}
+
+cmd_producer_perf_test() {
+    kafka_run_class kafka.perf.ProducerPerformance $@
+}
+
+cmd_simple_consumer_perf_test() {
+    kafka_run_class kafka.tools.SimpleConsumerPerformance $@
+}
+
+cmd_replay_log_producer() {
+    export JMX_PORT=${JMX_PORT:-9992}
+    export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"
+    kafka-run-class kafka.tools.ReplayLogProducer $@
+}
+
+cmd_zookeeper_shell() {
+    if [ $# -ne 1 ];
+    then
+        echo "USAGE: ${SCRIPT_NAME} zookeeper-shell zookeeper_host:port[/path]"
+        exit 1
+    fi
+
+    kafka-run-class org.apache.zookeeper.ZooKeeperMain -server $1
+}
+
+
+
+
+
+# if no commands, print usage.
+if [ $# -lt 1 ]; then
+    usage && exit 0
+fi
+
+# parse cli args
+while test $# != 0
+do
+    case "$1" in
+    server-start | server-stop | zookeeper-start | zookeeper-stop | console-consumer | console-producer | consumer-shell | producer-shell | simple-consumer-shell )
+        command="$1"; shift; break;
+        shift;
+        break;
+        ;;
+    -h|--help)
+        usage
+        exit 0
+        ;;
+    *)
+        echo "Invalid command : '$1'. Aborting." >&2
+        exit 1
+        ;;
+    esac
+done
+
+# convert dashes to underscores
+function_name=$(echo "${command}" | tr - _)
+# call the command function
+"cmd_$function_name" "$@"

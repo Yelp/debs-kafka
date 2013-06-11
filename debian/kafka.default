@@ -1,0 +1,16 @@
+# whether to allow init.d script to start a kafka broker ("yes", "no")
+KAFKA_START=no
+
+# The default JMX_PORT for Kafka Brokers is 9999.
+# Set BROKER_JMX_PORT to something else to override this.
+# BROKER_JMX_PORT=9999
+
+# JMX options
+KAFKA_JMX_OPTS=${KAFKA_JMX_OPTS:="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"}
+
+# Memory sizes, and logging configuration
+KAFKA_OPTS=${KAFKA_OPTS:="-Xmx512M -server -Dlog4j.configuration=file:/etc/kafka/log4j.properties"}
+
+# User and group to run as
+KAFKA_USER=kafka
+KAFKA_GROUP=kafka
