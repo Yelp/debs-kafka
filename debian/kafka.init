@@ -80,7 +80,7 @@ KAFKA_PID="/var/run/$NAME.pid"
 kafka_sh() {
 	# Escape any double quotes in the value of JAVA_OPTS
 	JAVA_OPTS="$(echo $JAVA_OPTS | sed 's/\"/\\\"/g')"
-	JMX_PORT=${BROKER_JMX_PORT:-9999}
+	JMX_PORT=${JMX_PORT:-9999}
 	KAFKA_JMX_OPTS="$KAFKA_JMX_OPTS -Dcom.sun.management.jmxremote.port=$JMX_PORT"
 
 	# Define the command to run kafka as a daemon
