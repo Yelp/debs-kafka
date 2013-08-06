@@ -11,8 +11,8 @@ ext/paranamer-ant-2.2.jar usr/share/java
 ext/paranamer-generator-2.2.jar usr/share/java
 ext/pig-0.8.0.jar usr/share/java
 ext/scalatest-1.2.jar usr/share/java
-ext/zkclient-20120522.jar usr/share/java
-ext/metrics-annotation-3.0.0-c0c8be71.jar usr/share/java
-ext/metrics-core-3.0.0-c0c8be71.jar usr/share/java
+ext/zkclient-0.3.jar usr/share/java
+ext/metrics-annotation-2.2.0.jar usr/share/java
+ext/metrics-core-2.2.0.jar usr/share/java
 debian/bin/kafka usr/sbin
 bin/kafka-console-consumer-log4j.properties etc/kafka
