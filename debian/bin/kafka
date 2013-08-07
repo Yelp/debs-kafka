@@ -16,18 +16,28 @@ $SCRIPT_NAME <command> [opts]
 Run $SCRIPT_NAME <command> with zero arguments/options to see command usage.
 
 Commands:
-  $SCRIPT_NAME server-start              <server.properties> (Default: $KAFKA_CONFIG/server.properties)
+  $SCRIPT_NAME create-topic               [opts]
+  $SCRIPT_NAME delete-topic               [opts]
+  $SCRIPT_NAME list-topic                 [opts]
+
+  $SCRIPT_NAME console-producer           [opts]
+  $SCRIPT_NAME console-consumer           [opts]
+  $SCRIPT_NAME simple-consumer-shell      [opts]
+  $SCRIPT_NAME replay-log-producer        [opts]
+
+  $SCRIPT_NAME check-reassignment-status  [opts]
+  $SCRIPT_NAME preferred-replica-election [opts]
+
+  $SCRIPT_NAME producer-perf-test         [opts]
+  $SCRIPT_NAME consumer-perf-test         [opts]
+  $SCRIPT_NAME simple-consumer-perf-test  [opts]
+
+  $SCRIPT_NAME server-start               <server.properties> (Default: $KAFKA_CONFIG/server.properties)
   $SCRIPT_NAME server-stop
-  $SCRIPT_NAME console-producer          [opts]
-  $SCRIPT_NAME console-consumer          [opts]
-  $SCRIPT_NAME producer-shell            [opts]
-  $SCRIPT_NAME producer-perf-test        [opts]
-  $SCRIPT_NAME replay-log-producer       [opts]
-  $SCRIPT_NAME simple-consumer-shell     [opts]
-  $SCRIPT_NAME simple-consumer-perf-test [opts]
-  $SCRIPT_NAME zookeeper-start           <zookeeper.properties> (Default: $KAFKA_CONFIG/zookeeper.properties)
+
+  $SCRIPT_NAME zookeeper-start            <zookeeper.properties> (Default: $KAFKA_CONFIG/zookeeper.properties)
   $SCRIPT_NAME zookeeper-stop
-  $SCRIPT_NAME zookeeper-shell           [opts]
+  $SCRIPT_NAME zookeeper-shell            [opts]
 
 Environment Variables:
   KAFKA_CONFIG - location of Kafka config files.  Default: /etc/kafka
@@ -76,6 +86,67 @@ kafka_run_class() {
 }
 
 
+cmd_create_topic() {
+    kafka_run_class kafka.admin.CreateTopicCommand $@
+}
+
+cmd_delete_topic() {
+    kafka_run_class kafka.admin.DeleteTopicCommand $@
+}
+
+cmd_list_topic() {
+    kafka_run_class kafka.admin.ListTopicCommand $@
+}
+
+cmd_console_producer() {
+    export JMX_PORT=${JMX_PORT:-9990}
+    kafka_run_class kafka.producer.ConsoleProducer $@
+}
+
+cmd_console_consumer() {
+    export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/kafka-console-consumer-log4j.properties"
+    kafka_run_class kafka.consumer.ConsoleConsumer $@
+}
+
+
+cmd_consumer_shell() {
+    kafka_run_class kafka.tools.ConsumerShell $@
+}
+
+cmd_producer_shell() {
+    export JMX_PORT=${JMX_PORT:-9991}
+    kafka_run_class kafka.tools.ProducerShell $@
+}
+
+cmd_simple_consumer_shell() {
+    kafka_run_class kafka.tools.SimpleConsumerShell $@
+}
+
+cmd_producer_perf_test() {
+    kafka_run_class kafka.perf.ProducerPerformance $@
+}
+cmd_consumer_perf_test() {
+    kafka_run_class kafka.perf.ConsumerPerformance $@
+}
+
+cmd_simple_consumer_perf_test() {
+    kafka_run_class kafka.tools.SimpleConsumerPerformance $@
+}
+
+cmd_replay_log_producer() {
+    export JMX_PORT=${JMX_PORT:-9992}
+    export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"
+    kafka_run_class kafka.tools.ReplayLogProducer $@
+}
+
+cmd_check_reassignment_status() {
+    kafka_run_class kafka.admin.CheckReassignmentStatus $@
+}
+
+cmd_preferred_replica_election() {
+    kafka_run_class kafka.admin.PreferredReplicaLeaderElectionCommand $@
+}
+
 cmd_server_start() {
     # default server.properties to $KAFKA_CONFIG/server.properties
     server_properties=${1:-${KAFKA_CONFIG}/server.properties}
@@ -99,47 +170,6 @@ cmd_zookeeper_stop() {
     ps ax | grep -i 'zookeeper' | grep -v grep | awk '{print $1}' | xargs kill -SIGINT
 }
 
-cmd_console_consumer() {
-    export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/kafka-console-consumer-log4j.properties"
-    kafka_run_class kafka.consumer.ConsoleConsumer $@
-}
-
-cmd_console_producer() {
-    export JMX_PORT=${JMX_PORT:-9990}
-    kafka_run_class kafka.producer.ConsoleProducer $@
-}
-
-cmd_consumer_shell() {
-    kafka_run_class kafka.tools.ConsumerShell $@
-}
-
-cmd_producer_shell() {
-    export JMX_PORT=${JMX_PORT:-9991}
-    kafka_run_class kafka.tools.ProducerShell $@
-}
-
-cmd_simple_consumer_shell() {
-    kafka_run_class kafka.tools.SimpleConsumerShell $@
-}
-
-cmd_consumer_perf_test() {
-    kafka_run_class kafka.perf.ConsumerPerformance $@
-}
-
-cmd_producer_perf_test() {
-    kafka_run_class kafka.perf.ProducerPerformance $@
-}
-
-cmd_simple_consumer_perf_test() {
-    kafka_run_class kafka.tools.SimpleConsumerPerformance $@
-}
-
-cmd_replay_log_producer() {
-    export JMX_PORT=${JMX_PORT:-9992}
-    export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"
-    kafka-run-class kafka.tools.ReplayLogProducer $@
-}
-
 cmd_zookeeper_shell() {
     if [ $# -ne 1 ];
     then
@@ -147,7 +177,7 @@ cmd_zookeeper_shell() {
         exit 1
     fi
 
-    kafka-run-class org.apache.zookeeper.ZooKeeperMain -server $1
+    kafka_run_class org.apache.zookeeper.ZooKeeperMain -server $1
 }
 
 
@@ -163,7 +193,7 @@ fi
 while test $# != 0
 do
     case "$1" in
-    server-start | server-stop | zookeeper-start | zookeeper-stop | console-consumer | console-producer | consumer-shell | producer-shell | simple-consumer-shell )
+    create-topic | delete-topic | list-topic | console-producer | console-consumer | simple-consumer-shell | replay-log-producer | check-reassignment-status | preferred-replica-election | producer-perf-test | consumer-perf-test | simple-consumer-perf-test | server-start | server-stop | zookeeper-start | zookeeper-stop | zookeeper-shell )
         command="$1"; shift; break;
         shift;
         break;
