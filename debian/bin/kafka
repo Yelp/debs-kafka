@@ -25,6 +25,9 @@ Commands:
   $SCRIPT_NAME simple-consumer-shell      [opts]
   $SCRIPT_NAME replay-log-producer        [opts]
 
+  $SCRIPT_NAME mirror-maker               [opts]
+  $SCRIPT_NAME consumer-offset-checker    [opts]
+
   $SCRIPT_NAME check-reassignment-status  [opts]
   $SCRIPT_NAME preferred-replica-election [opts]
 
@@ -139,6 +142,15 @@ cmd_replay_log_producer() {
     kafka_run_class kafka.tools.ReplayLogProducer $@
 }
 
+cmd_mirror_maker() {
+    export JMX_PORT=${JMX_PORT:-9993}
+    kafka_run_class kafka.tools.MirrorMaker $@
+}
+
+cmd_consumer_offset_checker() {
+    kafka_run_class kafka.tools.ConsumerOffsetChecker $@
+}
+
 cmd_check_reassignment_status() {
     kafka_run_class kafka.admin.CheckReassignmentStatus $@
 }
@@ -193,12 +205,12 @@ fi
 while test $# != 0
 do
     case "$1" in
-    create-topic | delete-topic | list-topic | console-producer | console-consumer | simple-consumer-shell | replay-log-producer | check-reassignment-status | preferred-replica-election | producer-perf-test | consumer-perf-test | simple-consumer-perf-test | server-start | server-stop | zookeeper-start | zookeeper-stop | zookeeper-shell )
+    create-topic | delete-topic | list-topic | console-producer | console-consumer | simple-consumer-shell | replay-log-producer | mirror-maker | consumer-offset-checker | check-reassignment-status | preferred-replica-election | producer-perf-test | consumer-perf-test | simple-consumer-perf-test | server-start | server-stop | zookeeper-start | zookeeper-stop | zookeeper-shell )
         command="$1"; shift; break;
         shift;
         break;
         ;;
-    -h|--help)
+    -h|--help|help)
         usage
         exit 0
         ;;
@@ -213,3 +225,4 @@ done
 function_name=$(echo "${command}" | tr - _)
 # call the command function
 "cmd_$function_name" "$@"
+
