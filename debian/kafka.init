@@ -110,7 +110,7 @@ case "$1" in
 	fi
 
 	if [ -n "$KAFKA_START" -a "$KAFKA_START" != "yes" ]; then
-		log_failure_msg "KAFKA_START not set to 'yes' in /etc/default/kafka, not starting"
+		log_failure_msg "KAFKA_START not set to 'yes' in $DEFAULT, not starting"
 		exit 0
 	fi
 
