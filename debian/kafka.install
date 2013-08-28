@@ -15,4 +15,3 @@ ext/zkclient-0.3.jar usr/share/java
 ext/metrics-annotation-2.2.0.jar usr/share/java
 ext/metrics-core-2.2.0.jar usr/share/java
 debian/bin/kafka usr/sbin
-bin/kafka-console-consumer-log4j.properties etc/kafka
