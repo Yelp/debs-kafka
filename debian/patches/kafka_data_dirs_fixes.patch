@@ -4,9 +4,9 @@ diff -r -u a/config/server.properties b/config/server.properties
 @@ -48,7 +48,7 @@
  ############################# Log Basics #############################
  
- # The directory under which to store log files
--log.dir=/tmp/kafka-logs
-+log.dir=/var/spool/kafka
+ # A comma seperated list of directories under which to store log files
+-log.dirs=/tmp/kafka-logs
++log.dirs=/var/spool/kafka
  
  # The number of logical partitions per topic per server. More partitions allow greater parallelism
  # for consumption, but also mean more files.
