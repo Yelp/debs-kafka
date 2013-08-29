@@ -1,0 +1,34 @@
+# whether to allow init.d script to start a Kafka MirrorMaker daemon ("yes", "no")
+KAFKA_MIRROR_START=no
+
+# The default JMX_PORT for Kafka Mirror Makers is 9993.
+# Set JMX_PORT to something else to override this.
+# JMX_PORT=9993
+
+# JMX options
+KAFKA_JMX_OPTS=${KAFKA_JMX_OPTS:="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"}
+
+# Memory sizes, and logging configuration
+KAFKA_OPTS=${KAFKA_OPTS:="-Xmx512M -server -Dlog4j.configuration=file:/etc/kafka/log4j.properties"}
+
+# User and group to run as
+KAFKA_USER=kafka
+KAFKA_GROUP=kafka
+
+#
+# MirrorMaker options:
+#
+# Set this to a space separated list of consumer.properties files.
+# By default, /etc/init.d/kafka-mirror will use any files that match
+# /etc/kafka/mirror/consumer.*
+#KAFKA_MIRROR_CONSUMER_CONFIGS=
+
+#KAFKA_MIRROR_PRODUCER_CONFIG=/etc/kafka/mirror/producer.properties
+
+# Only set one of the following.
+#KAFKA_MIRROR_WHITELIST='.*'
+#KAFKA_MIRROR_BLACKLIST=''
+
+#KAFKA_MIRROR_NUM_STREAMS=1
+#KAFKA_MIRROR_NUM_PRODUCERS=1
+#KAFKA_MIRROR_QUEUE_SIZE=10000

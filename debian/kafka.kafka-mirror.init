@@ -1,0 +1,254 @@
+#!/bin/sh
+#
+# /etc/init.d/kafka-mirror -- startup script for the Kafka MirrorMaker.
+# See: https://cwiki.apache.org/confluence/display/KAFKA/Kafka+mirroring+%28MirrorMaker%29
+#
+# Written by Alexandros Kosiaris <akosiaris@wikimedia.org> and Andrew Otto <otto@wikimedia.org>
+#
+### BEGIN INIT INFO
+# Provides:		  kafka-mirror
+# Required-Start:	$local_fs $remote_fs $network
+# Required-Stop:	 $local_fs $remote_fs $network
+# Should-Start:	  $named
+# Should-Stop:	   $named
+# Default-Start:	 2 3 4 5
+# Default-Stop:	  0 1 6
+# Short-Description: Start kafka MirrorMaker
+# Description:	   Start the Kafka MirrorMaker tool used to consume from multiple kafka clusters and produce into another.
+### END INIT INFO
+
+set -e
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+NAME="$(basename "$0" | sed 's/^[KS][0-9]\{2\}//')"
+DESC="MirrorMaker"
+DEFAULT=/etc/default/$NAME
+
+if [ `id -u` -ne 0 ]; then
+	echo "You need root privileges to run this script"
+	exit 1
+fi
+
+# Make sure kafka is started with system locale
+if [ -r /etc/default/locale ]; then
+	. /etc/default/locale
+	export LANG
+fi
+
+. /lib/lsb/init-functions
+
+if [ -r /etc/default/rcS ]; then
+	. /etc/default/rcS
+fi
+
+# The following variables can be overwritten in $DEFAULT
+
+# Run kafka as this user ID and group ID
+KAFKA_USER=kafka
+KAFKA_GROUP=kafka
+KAFKA_START=yes
+KAFKA_CONFIG=/etc/kafka
+
+# Read in consumer config files from /etc/kafka/mirror.
+KAFKA_MIRROR_CONSUMER_CONFIGS=$(ls $KAFKA_CONFIG/mirror/consumer.* || true) # Don't error out yet if files don't exist.
+KAFKA_MIRROR_PRODUCER_CONFIG=$KAFKA_CONFIG/mirror/producer.properties
+
+KAFKA_MIRROR_NUM_STREAMS=1
+KAFKA_MIRROR_NUM_PRODUCERS=1
+KAFKA_MIRROR_QUEUE_SIZE=10000
+KAFKA_MIRROR_WHITELIST='.*'
+KAFKA_MIRROR_BLACKLIST=''
+
+JDK_DIRS="/usr/lib/jvm/default-java /usr/lib/jvm/java-6-sun /usr/lib/jvm/java-1.5.0-sun /usr/lib/j2sdk1.5-sun /usr/lib/j2sdk1.5-ibm"
+
+# Look for the right JVM to use.
+for jdir in $JDK_DIRS; do
+	if [ -r "$jdir/bin/java" -a -z "${JAVA_HOME}" ]; then
+	JAVA_HOME="$jdir"
+	fi
+done
+export JAVA_HOME
+
+# Default Java options
+# Set java.awt.headless=true if JAVA_OPTS is not set so the
+# Xalan XSL transformer can work without X11 display on JDK 1.4+
+if [ -z "$JAVA_OPTS" ]; then
+	JAVA_OPTS="-Djava.awt.headless=true"
+fi
+
+# End of variables that can be overwritten in $DEFAULT
+
+# overwrite settings from default file
+if [ -f "$DEFAULT" ]; then
+	. "$DEFAULT"
+fi
+
+# Setting the classpath to all the needed dependencies.
+CLASSPATH=$CLASSPATH:/usr/share/java/scala-library.jar:/usr/share/java/jetty.jar:/usr/share/java/jetty-util.jar:/usr/share/java/zookeeper.jar:/usr/share/java/velocity-1.7.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/servlet-api-2.5.jar:/usr/share/java/jsp-api-2.1.jar:/usr/share/java/qdox.jar:/usr/share/java/paranamer.jar:/usr/share/java/oro.jar:/usr/share/java/objenesis.jar:/usr/share/java/log4j-1.2-1.2.16.jar:/usr/share/java/junit4.jar:/usr/share/java/joda-time.jar:/usr/share/java/jets3t.jar:/usr/share/java/jackson-core.jar:/usr/share/java/jackson-mapper.jar:/usr/share/java/hsqldb.jar:/usr/share/java/commons-cli.jar:/usr/share/java/commons-codec.jar:/usr/share/java/commons-collections.jar:/usr/share/java/commons-compress.jar:/usr/share/java/commons-el.jar:/usr/share/java/commons-httpclient.jar:/usr/share/java/commons-io.jar:/usr/share/java/commons-lang.jar:/usr/share/java/commons-logging.jar:/usr/share/java/commons-net.jar:/usr/share/java/cglib.jar:/usr/share/java/asm3.jar:/usr/share/java/snappy-java-1.0.4.1.jar:/usr/share/java/jasper-runtime-5.5.12.jar:/usr/share/java/jsp-api-2.1-6.1.14.jar:/usr/share/java/avro-1.4.0.jar:/usr/share/java/kfs-0.3.jar:/usr/share/java/jsp-2.1-6.1.14.jar:/usr/share/java/scalatest-1.2.jar:/usr/share/java/paranamer-ant-2.2.jar:/usr/share/java/paranamer-generator-2.2.jar:/usr/share/java/pig-0.8.0.jar:/usr/share/java/zkclient-0.3.jar:/usr/share/java/easymock-3.0.jar:/usr/share/java/jasper-compiler-5.5.12.jar:/usr/share/java/hadoop-core-0.20.2.jar:/usr/share/java/xmlenc-0.52.jar:/usr/share/java/jopt-simple-3.2.jar:/usr/share/kafka/kafka.jar:/usr/share/kafka/hadoop-consumer.jar:/usr/share/kafka/hadoop-producer.jar:/usr/share/kafka/kafka-kafka-examples.jar:/usr/share/kafka/kafka-perf.jar:/usr/share/java/metrics-annotation-2.2.0.jar:/usr/share/java/metrics-core-2.2.0.jar
+
+# Define other required variables
+KAFKA_MIRROR_PID="/var/run/$NAME.pid"
+
+#
+# MirrorMaker argument checking:
+#
+
+if [ -z $KAFKA_MIRROR_CONSUMER_CONFIGS ]; then
+	echo "No consumer config files provided."
+	exit 1
+fi
+if [ -z $KAFKA_MIRROR_PRODUCER_CONFIG ]; then
+	echo "No producer config file provided."
+	exit 1
+fi
+
+if [ -n "$KAFKA_MIRROR_WHITELIST" -a -n "$KAFKA_MIRROR_BLACKLIST" ]; then
+	echo "Must set exactly one of KAFKA_MIRROR_WHITELIST and KAFKA_MIRROR_BLACKLIST, not both."
+	exit 1
+elif [ -z "$KAFKA_MIRROR_WHITELIST" -a -z "$KAFKA_MIRROR_BLACKLIST"]; then
+	echo "Must set exactly one of KAFKA_MIRROR_WHITELIST or KAFKA_MIRROR_BLACKLIST."
+	exit 1
+fi
+
+if [ ! -r $KAFKA_MIRROR_PRODUCER_CONFIG ]; then
+	echo "Cannot read producer config file '$KAFKA_MIRROR_PRODUCER_CONFIG'."
+	exit 1
+fi
+
+
+kafka_mirror_sh() {
+	# Escape any double quotes in the value of JAVA_OPTS
+	JAVA_OPTS="$(echo $JAVA_OPTS | sed 's/\"/\\\"/g')"
+	JMX_PORT=${JMX_PORT:-9993}
+	KAFKA_JMX_OPTS="$KAFKA_JMX_OPTS -Dcom.sun.management.jmxremote.port=$JMX_PORT"
+
+	# Define the command to run kafka as a daemon
+	# set -a tells sh to export assigned variables to spawned shells.
+	KAFKA_MIRROR_ARGS="$JAVA_OPTS \
+		$KAFKA_OPTS \
+		$KAFKA_JMX_OPTS \
+		-cp $CLASSPATH \
+		kafka.tools.MirrorMaker \
+		--num.streams $KAFKA_MIRROR_NUM_STREAMS \
+		--num.producers $KAFKA_MIRROR_NUM_PRODUCERS \
+		--queue.size $KAFKA_MIRROR_QUEUE_SIZE \
+		--producer.config $KAFKA_MIRROR_PRODUCER_CONFIG "
+
+	if [ -n "$KAFKA_MIRROR_WHITELIST" ]; then
+		KAFKA_MIRROR_ARGS="$KAFKA_MIRROR_ARGS --whitelist '$KAFKA_MIRROR_WHITELIST' "
+	else
+		KAFKA_MIRROR_ARGS="$KAFKA_MIRROR_ARGS --blacklist '$KAFKA_MIRROR_BLACKLIST' "
+	fi
+
+	# Add all consumer config files to KAFKA_MIRROR_ARGS
+	for CONSUMER_CONFIG in $KAFKA_MIRROR_CONSUMER_CONFIGS; do
+		KAFKA_MIRROR_ARGS="$KAFKA_MIRROR_ARGS --consumer.config $CONSUMER_CONFIG"
+	done
+
+	# Run as a daemon
+	set +e
+
+	start-stop-daemon --start -b -u "$KAFKA_USER" -g "$KAFKA_GROUP" \
+		-c "$KAFKA_USER" -m -p "$KAFKA_MIRROR_PID" \
+		-x "$JAVA_HOME/bin/java" -- $KAFKA_MIRROR_ARGS
+	status="$?"
+	set +a -e
+	return $status
+}
+
+case "$1" in
+  start)
+	if [ -z "$JAVA_HOME" ]; then
+		log_failure_msg "no JDK found - please set JAVA_HOME"
+		exit 1
+	fi
+
+	if [ -n "$KAFKA_MIRROR_START" -a "$KAFKA_MIRROR_START" != "yes" ]; then
+		log_failure_msg "KAFKA_MIRROR_START not set to 'yes' in $DEFAULT, not starting"
+		exit 0
+	fi
+
+	log_daemon_msg "Starting $DESC" "$NAME"
+	if start-stop-daemon --test --start --pidfile "$KAFKA_MIRROR_PID" \
+		--user $KAFKA_USER --exec "$JAVA_HOME/bin/java" \
+		>/dev/null; then
+
+		kafka_mirror_sh start
+		sleep 5
+		if start-stop-daemon --test --start --pidfile "$KAFKA_MIRROR_PID" \
+			--user $KAFKA_USER --exec "$JAVA_HOME/bin/java" \
+			>/dev/null; then
+			if [ -f "$KAFKA_MIRROR_PID" ]; then
+				rm -f "$KAFKA_MIRROR_PID"
+			fi
+			log_end_msg 1
+		else
+			log_end_msg 0
+		fi
+	else
+			log_progress_msg "(already running)"
+		log_end_msg 0
+	fi
+	;;
+  stop)
+	log_daemon_msg "Stopping $DESC" "$NAME"
+
+	set +e
+	if [ -f "$KAFKA_MIRROR_PID" ]; then
+		start-stop-daemon --stop --pidfile "$KAFKA_MIRROR_PID" \
+			--user "$KAFKA_USER" \
+			--retry=TERM/20/KILL/5 >/dev/null
+		if [ $? -eq 1 ]; then
+			log_progress_msg "$DESC is not running but pid file exists, cleaning up"
+		elif [ $? -eq 3 ]; then
+			PID="`cat $KAFKA_MIRROR_PID`"
+			log_failure_msg "Failed to stop $NAME (pid $PID)"
+			exit 1
+		fi
+		rm -f "$KAFKA_MIRROR_PID"
+	else
+		log_progress_msg "(not running)"
+	fi
+	log_end_msg 0
+	set -e
+	;;
+   status)
+	set +e
+	start-stop-daemon --test --start --pidfile "$KAFKA_MIRROR_PID" \
+		--user $KAFKA_USER --exec "$JAVA_HOME/bin/java" \
+		>/dev/null 2>&1
+	if [ "$?" = "0" ]; then
+
+		if [ -f "$KAFKA_MIRROR_PID" ]; then
+			log_success_msg "$DESC is not running, but pid file exists."
+			exit 1
+		else
+			log_success_msg "$DESC is not running."
+			exit 3
+		fi
+	else
+		log_success_msg "$DESC is running with pid `cat $KAFKA_MIRROR_PID`"
+	fi
+	set -e
+		;;
+  restart|force-reload)
+	if [ -f "$KAFKA_MIRROR_PID" ]; then
+		$0 stop
+		sleep 1
+	fi
+	$0 start
+	;;
+  try-restart)
+		if start-stop-daemon --test --start --pidfile "$KAFKA_MIRROR_PID" \
+		--user $KAFKA_USER --exec "$JAVA_HOME/bin/java" \
+		>/dev/null; then
+		$0 start
+	fi
+		;;
+  *)
+	log_success_msg "Usage: $0 {start|stop|restart|try-restart|force-reload|status}"
+	exit 1
+	;;
+esac
+
+exit 0
