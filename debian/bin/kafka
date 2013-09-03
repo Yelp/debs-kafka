@@ -173,7 +173,7 @@ cmd_server_start() {
 }
 
 cmd_server_stop() {
-    ps ax | grep -i 'kafka.Kafka' | grep -v grep | awk '{print $1}' | xargs kill -SIGINT
+    ps ax | grep -i 'kafka\.Kafka' | grep java | grep -v grep | awk '{print $1}' | xargs kill -SIGINT
 }
 
 cmd_zookeeper_start() {
