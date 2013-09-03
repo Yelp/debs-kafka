@@ -17,7 +17,6 @@ Run $SCRIPT_NAME <command> with zero arguments/options to see command usage.
 
 Commands:
   $SCRIPT_NAME create-topic               [opts]
-  $SCRIPT_NAME delete-topic               [opts]
   $SCRIPT_NAME list-topic                 [opts]
 
   $SCRIPT_NAME console-producer           [opts]
@@ -28,6 +27,8 @@ Commands:
   $SCRIPT_NAME mirror-maker               [opts]
   $SCRIPT_NAME consumer-offset-checker    [opts]
 
+  $SCRIPT_NAME add-partitions             [opts]
+  $SCRIPT_NAME reassign-partitions        [opts]
   $SCRIPT_NAME check-reassignment-status  [opts]
   $SCRIPT_NAME preferred-replica-election [opts]
 
@@ -93,10 +94,6 @@ cmd_create_topic() {
     kafka_run_class kafka.admin.CreateTopicCommand $@
 }
 
-cmd_delete_topic() {
-    kafka_run_class kafka.admin.DeleteTopicCommand $@
-}
-
 cmd_list_topic() {
     kafka_run_class kafka.admin.ListTopicCommand $@
 }
@@ -125,17 +122,6 @@ cmd_simple_consumer_shell() {
     kafka_run_class kafka.tools.SimpleConsumerShell $@
 }
 
-cmd_producer_perf_test() {
-    kafka_run_class kafka.perf.ProducerPerformance $@
-}
-cmd_consumer_perf_test() {
-    kafka_run_class kafka.perf.ConsumerPerformance $@
-}
-
-cmd_simple_consumer_perf_test() {
-    kafka_run_class kafka.tools.SimpleConsumerPerformance $@
-}
-
 cmd_replay_log_producer() {
     export JMX_PORT=${JMX_PORT:-9992}
     export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"
@@ -151,12 +137,31 @@ cmd_consumer_offset_checker() {
     kafka_run_class kafka.tools.ConsumerOffsetChecker $@
 }
 
+cmd_add_partitions() {
+    kafka_run_class kafka.admin.AddPartitionsCommand $@
+}
+
+cmd_reassign_partitions() {
+    kafka_run_class kafka.admin.CheckReassignmentStatus $@
+}
+
 cmd_check_reassignment_status() {
     kafka_run_class kafka.admin.CheckReassignmentStatus $@
 }
 
 cmd_preferred_replica_election() {
     kafka_run_class kafka.admin.PreferredReplicaLeaderElectionCommand $@
+}
+
+cmd_producer_perf_test() {
+    kafka_run_class kafka.perf.ProducerPerformance $@
+}
+cmd_consumer_perf_test() {
+    kafka_run_class kafka.perf.ConsumerPerformance $@
+}
+
+cmd_simple_consumer_perf_test() {
+    kafka_run_class kafka.tools.SimpleConsumerPerformance $@
 }
 
 cmd_server_start() {
@@ -205,7 +210,26 @@ fi
 while test $# != 0
 do
     case "$1" in
-    create-topic | delete-topic | list-topic | console-producer | console-consumer | simple-consumer-shell | replay-log-producer | mirror-maker | consumer-offset-checker | check-reassignment-status | preferred-replica-election | producer-perf-test | consumer-perf-test | simple-consumer-perf-test | server-start | server-stop | zookeeper-start | zookeeper-stop | zookeeper-shell )
+    create-topic                    | \
+    list-topic                      | \
+    console-producer                | \
+    console-consumer                | \
+    simple-consumer-shell           | \
+    replay-log-producer             | \
+    mirror-maker                    | \
+    consumer-offset-checker         | \
+    add-partitions                  | \
+    reassign-partitions             | \
+    check-reassignment-status       | \
+    preferred-replica-election      | \
+    producer-perf-test              | \
+    consumer-perf-test              | \
+    simple-consumer-perf-test       | \
+    server-start                    | \
+    server-stop                     | \
+    zookeeper-start                 | \
+    zookeeper-stop                  | \
+    zookeeper-shell )
         command="$1"; shift; break;
         shift;
         break;
