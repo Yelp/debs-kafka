@@ -11,6 +11,14 @@ SCRIPT_NAME=$(basename "$0")
 KAFKA_CONFIG=${KAFKA_CONFIG:-/etc/kafka}
 LOG_DIR=${LOG_DIR:-/var/log/kafka}
 
+# Set ZOOKEEPER_OPT if ZOOKEEPER_URL is set and --zookeeper has not
+# also been passed in as a CLI arg.  This will be included
+# in command functions that take a --zookeeper argument.
+if [ -n "${ZOOKEEPER_URL}" -a -z "$(echo $@ | grep -- --zookeeper)" ]; then
+    ZOOKEEPER_OPT="--zookeeper ${ZOOKEEPER_URL}"
+fi
+
+
 USAGE="Usage:
 
 $SCRIPT_NAME <command> [opts]
@@ -45,6 +53,7 @@ Commands:
   $SCRIPT_NAME zookeeper-shell            [opts]
 
 Environment Variables:
+  ZOOKEEPER_URL              - If this is set, any commands that take a --zookeeper flag will be passed with this value.
   KAFKA_CONFIG               - location of Kafka config files.  Default: /etc/kafka
   JMX_PORT                   - Set this to expose JMX.  This is set by default for brokers and producers.
   KAFKA_JVM_PERFORMANCE_OPTS - Any special JVM perfomance options.  This is set by default.
@@ -119,11 +128,11 @@ kafka_run_class() {
 
 
 cmd_create_topic() {
-    kafka_run_class kafka.admin.CreateTopicCommand $@
+    kafka_run_class kafka.admin.CreateTopicCommand $ZOOKEEPER_OPT $@
 }
 
 cmd_list_topic() {
-    kafka_run_class kafka.admin.ListTopicCommand $@
+    kafka_run_class kafka.admin.ListTopicCommand $ZOOKEEPER_OPT $@
 }
 
 cmd_console_producer() {
@@ -134,11 +143,11 @@ cmd_console_producer() {
 
 cmd_console_consumer() {
     export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
-    kafka_run_class kafka.consumer.ConsoleConsumer $@
+    kafka_run_class kafka.consumer.ConsoleConsumer $ZOOKEEPER_OPT $@
 }
 
 cmd_consumer_shell() {
-    kafka_run_class kafka.tools.ConsumerShell $@
+    kafka_run_class kafka.tools.ConsumerShell $ZOOKEEPER_OPT $@
 }
 
 cmd_producer_shell() {
@@ -147,12 +156,12 @@ cmd_producer_shell() {
 }
 
 cmd_simple_consumer_shell() {
-    kafka_run_class kafka.tools.SimpleConsumerShell $@
+    kafka_run_class kafka.tools.SimpleConsumerShell $ZOOKEEPER_OPT $@
 }
 
 cmd_replay_log_producer() {
     export JMX_PORT=${JMX_PORT:-9992}
-    kafka_run_class kafka.tools.ReplayLogProducer $@
+    kafka_run_class kafka.tools.ReplayLogProducer $ZOOKEEPER_OPT $@
 }
 
 cmd_mirror_maker() {
@@ -163,23 +172,23 @@ cmd_mirror_maker() {
 }
 
 cmd_consumer_offset_checker() {
-    kafka_run_class kafka.tools.ConsumerOffsetChecker $@
+    kafka_run_class kafka.tools.ConsumerOffsetChecker $ZOOKEEPER_OPT $@
 }
 
 cmd_add_partitions() {
-    kafka_run_class kafka.admin.AddPartitionsCommand $@
+    kafka_run_class kafka.admin.AddPartitionsCommand $ZOOKEEPER_OPT $@
 }
 
 cmd_reassign_partitions() {
-    kafka_run_class kafka.admin.CheckReassignmentStatus $@
+    kafka_run_class kafka.admin.ReassignPartitionsCommand $ZOOKEEPER_OPT $@
 }
 
 cmd_check_reassignment_status() {
-    kafka_run_class kafka.admin.CheckReassignmentStatus $@
+    kafka_run_class kafka.admin.CheckReassignmentStatus $ZOOKEEPER_OPT $@
 }
 
 cmd_preferred_replica_election() {
-    kafka_run_class kafka.admin.PreferredReplicaLeaderElectionCommand $@
+    kafka_run_class kafka.admin.PreferredReplicaLeaderElectionCommand $ZOOKEEPER_OPT $@
 }
 
 cmd_producer_perf_test() {
@@ -188,12 +197,12 @@ cmd_producer_perf_test() {
 }
 cmd_consumer_perf_test() {
     export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
-    kafka_run_class kafka.perf.ConsumerPerformance $@
+    kafka_run_class kafka.perf.ConsumerPerformance $ZOOKEEPER_OPT $@
 }
 
 cmd_simple_consumer_perf_test() {
     export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
-    kafka_run_class kafka.tools.SimpleConsumerPerformance $@
+    kafka_run_class kafka.tools.SimpleConsumerPerformance $ZOOKEEPER_OPT $@
 }
 
 cmd_server_start() {
@@ -227,12 +236,14 @@ cmd_zookeeper_stop() {
 }
 
 cmd_zookeeper_shell() {
-    if [ $# -ne 1 ];
+    if [ -z "${ZOOKEEPER_URL}" -a $# -ne 1 ];
     then
         echo "USAGE: ${SCRIPT_NAME} zookeeper-shell zookeeper_host:port[/path]"
         exit 1
     fi
 
+    # Prefer the passed in $1 over ZOOKEEPER_URL for -server arg
+    ZOOKEEPER_URL=${1:-$ZOOKEEPER_URL}
     kafka_run_class org.apache.zookeeper.ZooKeeperMain -server $1
 }
 
