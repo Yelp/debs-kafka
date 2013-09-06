@@ -9,6 +9,7 @@
 
 SCRIPT_NAME=$(basename "$0")
 KAFKA_CONFIG=${KAFKA_CONFIG:-/etc/kafka}
+LOG_DIR=${LOG_DIR:-/var/log/kafka}
 
 USAGE="Usage:
 
@@ -44,23 +45,26 @@ Commands:
   $SCRIPT_NAME zookeeper-shell            [opts]
 
 Environment Variables:
-  KAFKA_CONFIG - location of Kafka config files.  Default: /etc/kafka
-  JMX_PORT     - Set this to expose JMX.  This is set by default for brokers and producers.
-
-NOTE:  the *-start and *-stop commands should not be used for production.  They
-are maintained here as they can be helpful for debugging and troubleshooting new
-Kafka Broker setups.
-
+  KAFKA_CONFIG               - location of Kafka config files.  Default: /etc/kafka
+  JMX_PORT                   - Set this to expose JMX.  This is set by default for brokers and producers.
+  KAFKA_JVM_PERFORMANCE_OPTS - Any special JVM perfomance options.  This is set by default.
+  KAFKA_HEAP_OPTS            - Any special JVM memory heap options.  This is set by default.
+  KAFKA_LOG4J_OPTS           - Any log4j options.  Especially -Dlog4j.configuration.  This is set by default.
+  KAFKA_OPTS                 - Any extra options you want to pass.
 "
 
 usage() { echo "${USAGE}"; }
 
 
-# Builds CLASSPATH and execs $1 as a java class.
+# Builds CLASSPATH and execs java with appropriate main class
 kafka_run_class() {
     if [ $# -lt 1 ]; then
       echo "USAGE: $0 classname [opts]"
       exit 1
+    fi
+
+    if [ -z "$SCALA_VERSION" ]; then
+        SCALA_VERSION=2.8.0
     fi
 
     # if these were not yet set (by user or defaults file),
@@ -72,8 +76,13 @@ kafka_run_class() {
         KAFKA_JMX_OPTS="$KAFKA_JMX_OPTS -Dcom.sun.management.jmxremote.port=$JMX_PORT "
     fi
 
+    # Log4j settings
+    if [ -z "$KAFKA_LOG4J_OPTS" ]; then
+      KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$KAFKA_CONFIG/tools-log4j.properties"
+    fi
+
     if [ -z "$KAFKA_OPTS" ]; then
-        KAFKA_OPTS="-Xmx512M -server  -Dlog4j.configuration=file:$KAFKA_CONFIG/log4j.properties"
+        KAFKA_OPTS=""
     fi
 
     if [ -z "$JAVA_HOME" ]; then
@@ -82,11 +91,30 @@ kafka_run_class() {
         JAVA="$JAVA_HOME/bin/java"
     fi
 
+    # Memory options
+    if [ -z "$KAFKA_HEAP_OPTS" ]; then
+        KAFKA_HEAP_OPTS="-Xmx256M"
+    fi
+
+    # JVM performance options
+    if [ -z "$KAFKA_JVM_PERFORMANCE_OPTS" ]; then
+      KAFKA_JVM_PERFORMANCE_OPTS="-server -XX:+UseCompressedOops -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC"
+    fi
+
+    # GC options
+    GC_FILE_SUFFIX='-gc.log'
+    GC_LOG_FILE_NAME=''
+    if [ "$1" = "daemon" ] && [ -z "$KAFKA_GC_LOG_OPTS"] ; then
+          shift
+          GC_LOG_FILE_NAME=$1$GC_FILE_SUFFIX
+          shift
+          KAFKA_GC_LOG_OPTS="-Xloggc:$LOG_DIR/$GC_LOG_FILE_NAME -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps "
+    fi
+
     # Setting the classpath to all the needed dependencies.
     CLASSPATH=$CLASSPATH:/usr/share/java/scala-library.jar:/usr/share/java/jetty.jar:/usr/share/java/jetty-util.jar:/usr/share/java/zookeeper.jar:/usr/share/java/velocity-1.7.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/servlet-api-2.5.jar:/usr/share/java/jsp-api-2.1.jar:/usr/share/java/qdox.jar:/usr/share/java/paranamer.jar:/usr/share/java/oro.jar:/usr/share/java/objenesis.jar:/usr/share/java/log4j-1.2-1.2.16.jar:/usr/share/java/junit4.jar:/usr/share/java/joda-time.jar:/usr/share/java/jets3t.jar:/usr/share/java/jackson-core.jar:/usr/share/java/jackson-mapper.jar:/usr/share/java/hsqldb.jar:/usr/share/java/commons-cli.jar:/usr/share/java/commons-codec.jar:/usr/share/java/commons-collections.jar:/usr/share/java/commons-compress.jar:/usr/share/java/commons-el.jar:/usr/share/java/commons-httpclient.jar:/usr/share/java/commons-io.jar:/usr/share/java/commons-lang.jar:/usr/share/java/commons-logging.jar:/usr/share/java/commons-net.jar:/usr/share/java/cglib.jar:/usr/share/java/asm3.jar:/usr/share/java/snappy-java-1.0.4.1.jar:/usr/share/java/jasper-runtime-5.5.12.jar:/usr/share/java/jsp-api-2.1-6.1.14.jar:/usr/share/java/avro-1.4.0.jar:/usr/share/java/kfs-0.3.jar:/usr/share/java/jsp-2.1-6.1.14.jar:/usr/share/java/scalatest-1.2.jar:/usr/share/java/paranamer-ant-2.2.jar:/usr/share/java/paranamer-generator-2.2.jar:/usr/share/java/pig-0.8.0.jar:/usr/share/java/zkclient-0.3.jar:/usr/share/java/easymock-3.0.jar:/usr/share/java/jasper-compiler-5.5.12.jar:/usr/share/java/hadoop-core-0.20.2.jar:/usr/share/java/xmlenc-0.52.jar:/usr/share/java/jopt-simple-3.2.jar:/usr/share/kafka/kafka.jar:/usr/share/kafka/hadoop-consumer.jar:/usr/share/kafka/hadoop-producer.jar:/usr/share/kafka/kafka-kafka-examples.jar:/usr/share/kafka/kafka-perf.jar:/usr/share/java/metrics-annotation-2.2.0.jar:/usr/share/java/metrics-core-2.2.0.jar
 
-    # echo $JAVA $KAFKA_OPTS $KAFKA_JMX_OPTS -cp $CLASSPATH $@
-    $JAVA $KAFKA_OPTS $KAFKA_JMX_OPTS -cp $CLASSPATH $@
+    exec $JAVA $KAFKA_HEAP_OPTS $KAFKA_JVM_PERFORMANCE_OPTS $KAFKA_GC_LOG_OPTS $KAFKA_JMX_OPTS $KAFKA_LOG4J_OPTS -cp $CLASSPATH $KAFKA_OPTS "$@"
 }
 
 
@@ -100,14 +128,14 @@ cmd_list_topic() {
 
 cmd_console_producer() {
     export JMX_PORT=${JMX_PORT:-9990}
+    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
     kafka_run_class kafka.producer.ConsoleProducer $@
 }
 
 cmd_console_consumer() {
-    export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/kafka-console-consumer-log4j.properties"
+    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
     kafka_run_class kafka.consumer.ConsoleConsumer $@
 }
-
 
 cmd_consumer_shell() {
     kafka_run_class kafka.tools.ConsumerShell $@
@@ -124,13 +152,14 @@ cmd_simple_consumer_shell() {
 
 cmd_replay_log_producer() {
     export JMX_PORT=${JMX_PORT:-9992}
-    export KAFKA_OPTS="-Xmx512M -server -Dcom.sun.management.jmxremote -Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"
     kafka_run_class kafka.tools.ReplayLogProducer $@
 }
 
 cmd_mirror_maker() {
     export JMX_PORT=${JMX_PORT:-9993}
-    kafka_run_class kafka.tools.MirrorMaker $@
+    export KAFKA_LOG4J_OPTS=${KAFKA_LOG4J_OPTS:-"-Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"}
+    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx1G -Xms1G"}
+    kafka_run_class daemon kafkaMirror kafka.tools.MirrorMaker $@
 }
 
 cmd_consumer_offset_checker() {
@@ -154,22 +183,28 @@ cmd_preferred_replica_election() {
 }
 
 cmd_producer_perf_test() {
+    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
     kafka_run_class kafka.perf.ProducerPerformance $@
 }
 cmd_consumer_perf_test() {
+    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
     kafka_run_class kafka.perf.ConsumerPerformance $@
 }
 
 cmd_simple_consumer_perf_test() {
+    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
     kafka_run_class kafka.tools.SimpleConsumerPerformance $@
 }
 
 cmd_server_start() {
     # default server.properties to $KAFKA_CONFIG/server.properties
-    server_properties=${1:-${KAFKA_CONFIG}/server.properties}
+    server_properties=${1:-"${KAFKA_CONFIG}/server.properties"}
 
     export JMX_PORT=${JMX_PORT:-9999}
-    kafka_run_class kafka.Kafka "${server_properties}"
+    export KAFKA_LOG4J_OPTS=${KAFKA_LOG4J_OPTS:-"-Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"}
+    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx1G -Xms1G"}
+
+    kafka_run_class daemon kafkaServer kafka.Kafka "${server_properties}"
 }
 
 cmd_server_stop() {
@@ -178,9 +213,13 @@ cmd_server_stop() {
 
 cmd_zookeeper_start() {
     # default zookeeper.properties to $KAFKA_CONFIG/zookeeper.properties
+    zookeeper_properties=${1:-"${KAFKA_CONFIG}/zookeeper.properties"}
+
     export JMX_PORT=${JMX_PORT:-9998}
-    zookeeper_properties=${1:-${KAFKA_CONFIG}/zookeeper.properties}
-    kafka_run_class org.apache.zookeeper.server.quorum.QuorumPeerMain ${zookeeper_properties}
+    export KAFKA_LOG4J_OPTS=${KAFKA_LOG4J_OPTS:-"-Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"}
+    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M -Xms512M"}
+
+    kafka_run_class daemon zookeeper org.apache.zookeeper.server.quorum.QuorumPeerMain "${zookeeper_properties}"
 }
 
 cmd_zookeeper_stop() {
@@ -249,4 +288,3 @@ done
 function_name=$(echo "${command}" | tr - _)
 # call the command function
 "cmd_$function_name" "$@"
-

@@ -1,23 +1,27 @@
 # whether to allow init.d script to start a Kafka MirrorMaker daemon ("yes", "no")
 KAFKA_MIRROR_START=no
 
-# The default JMX_PORT for Kafka Mirror Makers is 9993.
-# Set JMX_PORT to something else to override this.
-# JMX_PORT=9993
-
-# JMX options
-KAFKA_JMX_OPTS=${KAFKA_JMX_OPTS:="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"}
-
-# Memory sizes, and logging configuration
-KAFKA_OPTS=${KAFKA_OPTS:="-Xmx512M -server -Dlog4j.configuration=file:/etc/kafka/log4j.properties"}
-
 # User and group to run as
 KAFKA_USER=kafka
 KAFKA_GROUP=kafka
+KAFKA_CONFIG=/etc/kafka
+
+# The default JMX_PORT for Kafka MirrorMaker is 9993.
+# Set JMX_PORT to something else to override this.
+#JMX_PORT=9993
+#KAFKA_JMX_OPTS=${KAFKA_JMX_OPTS:="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"}
+
+# Memory sizes, and logging configuration
+#KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$KAFKA_CONFIG/log4j.properties"
+#KAFKA_JVM_PERFORMANCE_OPTS="-server -XX:+UseCompressedOops -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC"
+#KAFKA_HEAP_OPTS="-Xmx512M -Xms512M"
+#KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"
+#KAFKA_OPTS=""
 
 #
 # MirrorMaker options:
 #
+
 # Set this to a space separated list of consumer.properties files.
 # By default, /etc/init.d/kafka-mirror will use any files that match
 # /etc/kafka/mirror/consumer.*
