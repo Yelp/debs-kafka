@@ -111,7 +111,7 @@ index 0000000..211f667
 --- /dev/null
 +++ b/config/Makefile
 @@ -0,0 +1,9 @@
-+CONFFILES=consumer.properties log4j.properties producer.properties server.properties zookeeper.properties
++CONFFILES=consumer.properties log4j.properties tools-log4j.properties producer.properties server.properties zookeeper.properties
 +
 +all:	
 +
