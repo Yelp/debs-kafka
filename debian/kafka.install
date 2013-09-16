@@ -14,6 +14,8 @@ ext/scalatest-1.2.jar usr/share/java
 ext/zkclient-0.3.jar usr/share/java
 ext/metrics-annotation-2.2.0.jar usr/share/java
 ext/metrics-core-2.2.0.jar usr/share/java
+ext/metrics-ganglia-2.2.0.jar usr/share/java
+ext/metrics-graphite-2.2.0.jar usr/share/java
 debian/bin/kafka usr/sbin
 config/consumer.properties etc/kafka/mirror
 config/producer.properties etc/kafka/mirror
