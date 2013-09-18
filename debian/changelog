@@ -1,8 +1,14 @@
+kafka (0.8~20130913-1) precise; urgency=low
+
+  * Bumping version to reflect latest commit (aebf7461) in 0.8 branch.
+
+ -- Alexandros Kosiaris <akosiaris@wikimedia.org>  Wed, 09 Sep 2013 16:44:14 -0700
+
 kafka (0.8~20130827-1) precise; urgency=low
 
   * Bumping version to reflect latest commit in 0.8 branch.
 
- --  Alexandros Kosiaris <akosiaris@wikimedia.org> Wed, 28 Aug 2013 16:50:14 +0000
+ -- Alexandros Kosiaris <akosiaris@wikimedia.org>  Wed, 28 Aug 2013 16:50:14 +0000
 
 kafka (0.8~20130610-1) unstable; urgency=low
 
