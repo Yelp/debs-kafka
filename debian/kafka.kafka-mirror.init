@@ -50,7 +50,7 @@ KAFKA_START=yes
 KAFKA_CONFIG=/etc/kafka
 
 # Read in consumer config files from /etc/kafka/mirror.
-KAFKA_MIRROR_CONSUMER_CONFIGS=$(ls $KAFKA_CONFIG/mirror/consumer.* || true) # Don't error out yet if files don't exist.
+KAFKA_MIRROR_CONSUMER_CONFIGS=$(ls $KAFKA_CONFIG/mirror/consumer*.properties || true) # Don't error out yet if files don't exist.
 KAFKA_MIRROR_PRODUCER_CONFIG=$KAFKA_CONFIG/mirror/producer.properties
 
 KAFKA_MIRROR_NUM_STREAMS=1
@@ -90,11 +90,11 @@ KAFKA_MIRROR_PID="/var/run/$NAME.pid"
 # MirrorMaker argument checking:
 #
 
-if [ -z $KAFKA_MIRROR_CONSUMER_CONFIGS ]; then
+if [ -z "$KAFKA_MIRROR_CONSUMER_CONFIGS" ]; then
 	echo "No consumer config files provided."
 	exit 1
 fi
-if [ -z $KAFKA_MIRROR_PRODUCER_CONFIG ]; then
+if [ -z "$KAFKA_MIRROR_PRODUCER_CONFIG" ]; then
 	echo "No producer config file provided."
 	exit 1
 fi
@@ -107,7 +107,7 @@ elif [ -z "$KAFKA_MIRROR_WHITELIST" -a -z "$KAFKA_MIRROR_BLACKLIST"]; then
 	exit 1
 fi
 
-if [ ! -r $KAFKA_MIRROR_PRODUCER_CONFIG ]; then
+if [ ! -r "$KAFKA_MIRROR_PRODUCER_CONFIG" ]; then
 	echo "Cannot read producer config file '$KAFKA_MIRROR_PRODUCER_CONFIG'."
 	exit 1
 fi

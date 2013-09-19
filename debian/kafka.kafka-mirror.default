@@ -24,7 +24,7 @@ KAFKA_CONFIG=/etc/kafka
 
 # Set this to a space separated list of consumer.properties files.
 # By default, /etc/init.d/kafka-mirror will use any files that match
-# /etc/kafka/mirror/consumer.*
+# /etc/kafka/mirror/consumer*.properties
 #KAFKA_MIRROR_CONSUMER_CONFIGS=
 
 #KAFKA_MIRROR_PRODUCER_CONFIG=/etc/kafka/mirror/producer.properties
