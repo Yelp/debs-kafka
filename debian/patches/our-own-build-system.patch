@@ -113,7 +113,7 @@ index 0000000..211f667
 @@ -0,0 +1,15 @@
 +CONFFILES=log4j.properties tools-log4j.properties server.properties zookeeper.properties
 +MIRROR_CONFFILES=consumer.properties producer.properties
-+MIRROR_CONFFILES_EXAMPLES=$(MIRROR_CONFFILES_EXAMPLES:.properties=.properties.example)
++MIRROR_CONFFILES_EXAMPLES=$(MIRROR_CONFFILES:.properties=.properties.example)
 +
 +all:
 +
