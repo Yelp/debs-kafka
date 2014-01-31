@@ -73,6 +73,13 @@ if [ -f "$DEFAULT" ]; then
 	. "$DEFAULT"
 fi
 
+# If ulimit nofiles was set in $DEFAULT,
+# then change the limit for this process now.
+# This will not set nofiles higher than
+# system limit.
+if [ -n "$KAFKA_NOFILES_ULIMIT" ]; then
+    ulimit -n "$KAFKA_NOFILES_ULIMIT"
+fi
 
 # Define other required variables
 KAFKA_PID="/var/run/$NAME.pid"
