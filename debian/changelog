@@ -1,3 +1,9 @@
+kafka (0.8.0-2) precise; urgency=low
+
+  * Adding support for setting ulimit open files.
+
+ -- Andrew Otto (WMF) <otto@wikimedia.org>  Wed, 05 Feb 2014 15:49:05 +0000
+
 kafka (0.8.0-1) precise; urgency=low
 
   * Stable release of 0.8.0 tag.
