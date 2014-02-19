@@ -40,6 +40,7 @@ Commands:
   $SCRIPT_NAME reassign-partitions        [opts]
   $SCRIPT_NAME check-reassignment-status  [opts]
   $SCRIPT_NAME preferred-replica-election [opts]
+  $SCRIPT_NAME controlled-shutdown        [opts]
 
   $SCRIPT_NAME producer-perf-test         [opts]
   $SCRIPT_NAME consumer-perf-test         [opts]
@@ -191,6 +192,11 @@ cmd_preferred_replica_election() {
     kafka_run_class kafka.admin.PreferredReplicaLeaderElectionCommand $ZOOKEEPER_OPT $@
 }
 
+cmd_controlled_shutdown() {
+    kafka_run_class kafka.admin.ShutdownBroker $ZOOKEEPER_OPT $@
+}
+
+
 cmd_producer_perf_test() {
     export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
     kafka_run_class kafka.perf.ProducerPerformance $@
@@ -272,6 +278,7 @@ do
     reassign-partitions             | \
     check-reassignment-status       | \
     preferred-replica-election      | \
+    controlled-shutdown             | \
     producer-perf-test              | \
     consumer-perf-test              | \
     simple-consumer-perf-test       | \
