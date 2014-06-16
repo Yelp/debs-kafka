@@ -41,7 +41,7 @@ if [ -r /etc/default/rcS ]; then
 fi
 
 # # The following variables can be overwritten in $DEFAULT
-# 
+#
 # Run kafka as this user ID and group ID
 KAFKA_USER=kafka
 KAFKA_GROUP=kafka
@@ -49,7 +49,7 @@ KAFKA_GROUP=kafka
 KAFKA_CONFIG=/etc/kafka
 KAFKA_START=yes
 
-JDK_DIRS="/usr/lib/jvm/default-java /usr/lib/jvm/java-6-sun /usr/lib/jvm/java-1.5.0-sun /usr/lib/j2sdk1.5-sun /usr/lib/j2sdk1.5-ibm"
+JDK_DIRS="/usr/lib/jvm/java-7-openjdk-amd64 /usr/lib/jvm/default-java /usr/lib/jvm/java-6-sun /usr/lib/jvm/java-1.5.0-sun /usr/lib/j2sdk1.5-sun /usr/lib/j2sdk1.5-ibm"
 
 # Look for the right JVM to use
 for jdir in $JDK_DIRS; do

@@ -59,7 +59,7 @@ KAFKA_MIRROR_QUEUE_SIZE=10000
 KAFKA_MIRROR_WHITELIST='.*'
 KAFKA_MIRROR_BLACKLIST=''
 
-JDK_DIRS="/usr/lib/jvm/default-java /usr/lib/jvm/java-6-sun /usr/lib/jvm/java-1.5.0-sun /usr/lib/j2sdk1.5-sun /usr/lib/j2sdk1.5-ibm"
+JDK_DIRS="/usr/lib/jvm/java-7-openjdk-amd64 /usr/lib/jvm/default-java /usr/lib/jvm/java-6-sun /usr/lib/jvm/java-1.5.0-sun /usr/lib/j2sdk1.5-sun /usr/lib/j2sdk1.5-ibm"
 
 # Look for the right JVM to use.
 for jdir in $JDK_DIRS; do

@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-export JAVA_HOME=/usr/lib/jvm/default-java
+export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
 export PREFIX=/usr
 export SYSCONFDIR=/etc/kafka
 export VERSION=0.8
