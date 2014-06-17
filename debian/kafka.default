@@ -16,7 +16,13 @@ KAFKA_NOFILES_ULIMIT=8192
 
 # Memory sizes, and logging configuration
 #KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:$KAFKA_CONFIG/log4j.properties"
+
+# Default GC settings.
 #KAFKA_JVM_PERFORMANCE_OPTS="-server -XX:+UseCompressedOops -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC"
+# LinkedIn recommended GC settings.  See: https://kafka.apache.org/081/ops.html
+# You need Java 7 u51 or greater to use the G1 GC.
+#KAFKA_JVM_PERFORMANCE_OPTS="-server -XX:PermSize=48m -XX:MaxPermSize=48m -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35"
+
 #KAFKA_HEAP_OPTS="-Xmx1G -Xms1G"
 #KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"
 #KAFKA_OPTS=""
