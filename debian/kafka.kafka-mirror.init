@@ -86,32 +86,6 @@ fi
 # Define other required variables
 KAFKA_MIRROR_PID="/var/run/$NAME.pid"
 
-#
-# MirrorMaker argument checking:
-#
-
-if [ -z "$KAFKA_MIRROR_CONSUMER_CONFIGS" ]; then
-	echo "No consumer config files provided."
-	exit 1
-fi
-if [ -z "$KAFKA_MIRROR_PRODUCER_CONFIG" ]; then
-	echo "No producer config file provided."
-	exit 1
-fi
-
-if [ -n "$KAFKA_MIRROR_WHITELIST" -a -n "$KAFKA_MIRROR_BLACKLIST" ]; then
-	echo "Must set exactly one of KAFKA_MIRROR_WHITELIST and KAFKA_MIRROR_BLACKLIST, not both."
-	exit 1
-elif [ -z "$KAFKA_MIRROR_WHITELIST" -a -z "$KAFKA_MIRROR_BLACKLIST"]; then
-	echo "Must set exactly one of KAFKA_MIRROR_WHITELIST or KAFKA_MIRROR_BLACKLIST."
-	exit 1
-fi
-
-if [ ! -r "$KAFKA_MIRROR_PRODUCER_CONFIG" ]; then
-	echo "Cannot read producer config file '$KAFKA_MIRROR_PRODUCER_CONFIG'."
-	exit 1
-fi
-
 
 kafka_mirror_sh() {
 	# Escape any double quotes in the value of JAVA_OPTS
@@ -163,6 +137,32 @@ case "$1" in
 	if [ -n "$KAFKA_MIRROR_START" -a "$KAFKA_MIRROR_START" != "yes" ]; then
 		log_failure_msg "KAFKA_MIRROR_START not set to 'yes' in $DEFAULT, not starting"
 		exit 0
+	fi
+
+	#
+	# MirrorMaker argument checking:
+	#
+
+	if [ -z "$KAFKA_MIRROR_CONSUMER_CONFIGS" ]; then
+		echo "No consumer config files provided."
+		exit 1
+	fi
+	if [ -z "$KAFKA_MIRROR_PRODUCER_CONFIG" ]; then
+		echo "No producer config file provided."
+		exit 1
+	fi
+
+	if [ -n "$KAFKA_MIRROR_WHITELIST" -a -n "$KAFKA_MIRROR_BLACKLIST" ]; then
+		echo "Must set exactly one of KAFKA_MIRROR_WHITELIST and KAFKA_MIRROR_BLACKLIST, not both."
+		exit 1
+	elif [ -z "$KAFKA_MIRROR_WHITELIST" -a -z "$KAFKA_MIRROR_BLACKLIST"]; then
+		echo "Must set exactly one of KAFKA_MIRROR_WHITELIST or KAFKA_MIRROR_BLACKLIST."
+		exit 1
+	fi
+
+	if [ ! -r "$KAFKA_MIRROR_PRODUCER_CONFIG" ]; then
+		echo "Cannot read producer config file '$KAFKA_MIRROR_PRODUCER_CONFIG'."
+		exit 1
 	fi
 
 	log_daemon_msg "Starting $DESC" "$NAME"
