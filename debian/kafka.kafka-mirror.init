@@ -46,7 +46,7 @@ fi
 # Run kafka as this user ID and group ID
 KAFKA_USER=kafka
 KAFKA_GROUP=kafka
-KAFKA_START=yes
+KAFKA_MIRROR_START=yes
 KAFKA_CONFIG=/etc/kafka
 
 # Read in consumer config files from /etc/kafka/mirror.
