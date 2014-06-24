@@ -119,13 +119,13 @@ case "$1" in
 
 	log_daemon_msg "Starting $DESC" "$NAME"
 	if start-stop-daemon --test --start --pidfile "$KAFKA_PID" \
-		--user $KAFKA_USER --exec "${JAVA_HOME}/bin/java" \
+		--user "$KAFKA_USER" --exec "${JAVA_HOME}/bin/java" \
 		>/dev/null; then
 
 		kafka_sh start
 		sleep 5
 		if start-stop-daemon --test --start --pidfile "$KAFKA_PID" \
-			--user $KAFKA_USER --exec "${JAVA_HOME}/bin/java" \
+			--user "$KAFKA_USER" --exec "${JAVA_HOME}/bin/java" \
 			>/dev/null; then
 			if [ -f "$KAFKA_PID" ]; then
 				rm -f "$KAFKA_PID"
@@ -164,7 +164,7 @@ case "$1" in
    status)
 	set +e
 	start-stop-daemon --test --start --pidfile "$KAFKA_PID" \
-		--user $KAFKA_USER --exec "${JAVA_HOME}/bin/java" \
+		--user "$KAFKA_USER" --exec "${JAVA_HOME}/bin/java" \
 		>/dev/null 2>&1
 	if [ "$?" = "0" ]; then
 
@@ -189,7 +189,7 @@ case "$1" in
 	;;
   try-restart)
         if start-stop-daemon --test --start --pidfile "$KAFKA_PID" \
-		--user $KAFKA_USER --exec "${JAVA_HOME}/bin/java" \
+		--user "$KAFKA_USER" --exec "${JAVA_HOME}/bin/java" \
 		>/dev/null; then
 		$0 start
 	fi

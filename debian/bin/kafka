@@ -129,95 +129,95 @@ kafka_run_class() {
 
 
 cmd_create_topic() {
-    kafka_run_class kafka.admin.CreateTopicCommand $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.admin.CreateTopicCommand $ZOOKEEPER_OPT "$@"
 }
 
 cmd_list_topic() {
-    kafka_run_class kafka.admin.ListTopicCommand $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.admin.ListTopicCommand $ZOOKEEPER_OPT "$@"
 }
 
 cmd_console_producer() {
-    export JMX_PORT=${JMX_PORT:-9990}
-    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
-    kafka_run_class kafka.producer.ConsoleProducer $@
+    export JMX_PORT="${JMX_PORT:-9990}"
+    export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:--Xmx512M}"
+    kafka_run_class kafka.producer.ConsoleProducer "$@"
 }
 
 cmd_console_consumer() {
-    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
-    kafka_run_class kafka.consumer.ConsoleConsumer $ZOOKEEPER_OPT $@
+    export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:--Xmx512M}"
+    kafka_run_class kafka.consumer.ConsoleConsumer $ZOOKEEPER_OPT "$@"
 }
 
 cmd_consumer_shell() {
-    kafka_run_class kafka.tools.ConsumerShell $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.tools.ConsumerShell $ZOOKEEPER_OPT "$@"
 }
 
 cmd_producer_shell() {
-    export JMX_PORT=${JMX_PORT:-9991}
-    kafka_run_class kafka.tools.ProducerShell $@
+    export JMX_PORT="${JMX_PORT:-9991}"
+    kafka_run_class kafka.tools.ProducerShell "$@"
 }
 
 cmd_simple_consumer_shell() {
-    kafka_run_class kafka.tools.SimpleConsumerShell $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.tools.SimpleConsumerShell $ZOOKEEPER_OPT "$@"
 }
 
 cmd_replay_log_producer() {
-    export JMX_PORT=${JMX_PORT:-9992}
-    kafka_run_class kafka.tools.ReplayLogProducer $ZOOKEEPER_OPT $@
+    export JMX_PORT="${JMX_PORT:-9992}"
+    kafka_run_class kafka.tools.ReplayLogProducer $ZOOKEEPER_OPT "$@"
 }
 
 cmd_mirror_maker() {
-    export JMX_PORT=${JMX_PORT:-9993}
-    export KAFKA_LOG4J_OPTS=${KAFKA_LOG4J_OPTS:-"-Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"}
-    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx1G -Xms1G"}
-    kafka_run_class daemon kafkaMirror kafka.tools.MirrorMaker $@
+    export JMX_PORT="${JMX_PORT:-9993}"
+    export KAFKA_LOG4J_OPTS="${KAFKA_LOG4J_OPTS:--Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties}"
+    export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:--Xmx1G -Xms1G}"
+    kafka_run_class daemon kafkaMirror kafka.tools.MirrorMaker "$@"
 }
 
 cmd_consumer_offset_checker() {
-    kafka_run_class kafka.tools.ConsumerOffsetChecker $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.tools.ConsumerOffsetChecker $ZOOKEEPER_OPT "$@"
 }
 
 cmd_add_partitions() {
-    kafka_run_class kafka.admin.AddPartitionsCommand $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.admin.AddPartitionsCommand $ZOOKEEPER_OPT "$@"
 }
 
 cmd_reassign_partitions() {
-    kafka_run_class kafka.admin.ReassignPartitionsCommand $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.admin.ReassignPartitionsCommand $ZOOKEEPER_OPT "$@"
 }
 
 cmd_check_reassignment_status() {
-    kafka_run_class kafka.admin.CheckReassignmentStatus $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.admin.CheckReassignmentStatus $ZOOKEEPER_OPT "$@"
 }
 
 cmd_preferred_replica_election() {
-    kafka_run_class kafka.admin.PreferredReplicaLeaderElectionCommand $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.admin.PreferredReplicaLeaderElectionCommand $ZOOKEEPER_OPT "$@"
 }
 
 cmd_controlled_shutdown() {
-    kafka_run_class kafka.admin.ShutdownBroker $ZOOKEEPER_OPT $@
+    kafka_run_class kafka.admin.ShutdownBroker $ZOOKEEPER_OPT "$@"
 }
 
 
 cmd_producer_perf_test() {
-    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
-    kafka_run_class kafka.perf.ProducerPerformance $@
+    export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:-"-Xmx512M"}"
+    kafka_run_class kafka.perf.ProducerPerformance "$@"
 }
 cmd_consumer_perf_test() {
-    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
-    kafka_run_class kafka.perf.ConsumerPerformance $ZOOKEEPER_OPT $@
+    export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:-"-Xmx512M"}"
+    kafka_run_class kafka.perf.ConsumerPerformance $ZOOKEEPER_OPT "$@"
 }
 
 cmd_simple_consumer_perf_test() {
-    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M"}
-    kafka_run_class kafka.tools.SimpleConsumerPerformance $ZOOKEEPER_OPT $@
+    export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:-"-Xmx512M"}"
+    kafka_run_class kafka.tools.SimpleConsumerPerformance $ZOOKEEPER_OPT "$@"
 }
 
 cmd_server_start() {
     # default server.properties to $KAFKA_CONFIG/server.properties
     server_properties=${1:-"${KAFKA_CONFIG}/server.properties"}
 
-    export JMX_PORT=${JMX_PORT:-9999}
-    export KAFKA_LOG4J_OPTS=${KAFKA_LOG4J_OPTS:-"-Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"}
-    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx1G -Xms1G"}
+    export JMX_PORT="${JMX_PORT:-9999}"
+    export KAFKA_LOG4J_OPTS="${KAFKA_LOG4J_OPTS:--Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties}"
+    export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:--Xmx1G -Xms1G}"
 
     kafka_run_class daemon kafkaServer kafka.Kafka "${server_properties}"
 }
@@ -230,9 +230,9 @@ cmd_zookeeper_start() {
     # default zookeeper.properties to $KAFKA_CONFIG/zookeeper.properties
     zookeeper_properties=${1:-"${KAFKA_CONFIG}/zookeeper.properties"}
 
-    export JMX_PORT=${JMX_PORT:-9998}
-    export KAFKA_LOG4J_OPTS=${KAFKA_LOG4J_OPTS:-"-Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties"}
-    export KAFKA_HEAP_OPTS=${KAFKA_HEAP_OPTS:-"-Xmx512M -Xms512M"}
+    export JMX_PORT="${JMX_PORT:-9998}"
+    export KAFKA_LOG4J_OPTS="${KAFKA_LOG4J_OPTS:--Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties}"
+    export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:--Xmx512M -Xms512M}"
 
     kafka_run_class daemon zookeeper org.apache.zookeeper.server.quorum.QuorumPeerMain "${zookeeper_properties}"
 }
