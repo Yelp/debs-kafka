@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # kafka
+#
 # Wrapper script for Kafka executable classes.
 # This script is a single replacement for the
 # shell scripts shipped with Kafka source bin/
@@ -25,8 +26,7 @@ $SCRIPT_NAME <command> [opts]
 Run $SCRIPT_NAME <command> with zero arguments/options to see command usage.
 
 Commands:
-  $SCRIPT_NAME create-topic               [opts]
-  $SCRIPT_NAME list-topic                 [opts]
+  $SCRIPT_NAME topic                      [opts]
 
   $SCRIPT_NAME console-producer           [opts]
   $SCRIPT_NAME console-consumer           [opts]
@@ -46,10 +46,10 @@ Commands:
   $SCRIPT_NAME consumer-perf-test         [opts]
   $SCRIPT_NAME simple-consumer-perf-test  [opts]
 
-  $SCRIPT_NAME server-start               <server.properties> (Default: $KAFKA_CONFIG/server.properties)
+  $SCRIPT_NAME server-start               [-daemon] <server.properties> (Default: $KAFKA_CONFIG/server.properties)
   $SCRIPT_NAME server-stop
 
-  $SCRIPT_NAME zookeeper-start            <zookeeper.properties> (Default: $KAFKA_CONFIG/zookeeper.properties)
+  $SCRIPT_NAME zookeeper-start            [-daemon] <zookeeper.properties> (Default: $KAFKA_CONFIG/zookeeper.properties)
   $SCRIPT_NAME zookeeper-stop
   $SCRIPT_NAME zookeeper-shell            [opts]
 
@@ -68,8 +68,9 @@ usage() { echo "${USAGE}"; }
 
 # Builds CLASSPATH and execs java with appropriate main class
 kafka_run_class() {
-    if [ $# -lt 1 ]; then
-      echo "USAGE: $0 classname [opts]"
+    if [ $# -lt 1 ];
+    then
+      echo "USAGE: $0 [-daemon] [-name servicename] [-loggc] classname [opts]"
       exit 1
     fi
 
@@ -108,32 +109,54 @@ kafka_run_class() {
 
     # JVM performance options
     if [ -z "$KAFKA_JVM_PERFORMANCE_OPTS" ]; then
-      KAFKA_JVM_PERFORMANCE_OPTS="-server -XX:+UseCompressedOops -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC"
+        KAFKA_JVM_PERFORMANCE_OPTS="-server -XX:+UseCompressedOops -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC -Djava.awt.headless=true"
     fi
+
+    while [ $# -gt 0 ]; do
+      COMMAND=$1
+      case $COMMAND in
+        -name)
+          DAEMON_NAME=$2
+          CONSOLE_OUTPUT_FILE=$LOG_DIR/$DAEMON_NAME.out
+          shift 2
+          ;;
+        -loggc)
+          if [ -z "$KAFKA_GC_LOG_OPTS"] ; then
+            GC_LOG_ENABLED="true"
+          fi
+          shift
+          ;;
+        -daemon)
+          DAEMON_MODE="true"
+          shift
+          ;;
+        *)
+          break
+          ;;
+      esac
+    done
 
     # GC options
     GC_FILE_SUFFIX='-gc.log'
     GC_LOG_FILE_NAME=''
-    if [ "$1" = "daemon" ] && [ -z "$KAFKA_GC_LOG_OPTS"] ; then
-          shift
-          GC_LOG_FILE_NAME=$1$GC_FILE_SUFFIX
-          shift
-          KAFKA_GC_LOG_OPTS="-Xloggc:$LOG_DIR/$GC_LOG_FILE_NAME -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps "
+    if [ "x$GC_LOG_ENABLED" = "xtrue" ]; then
+      GC_LOG_FILE_NAME=$DAEMON_NAME$GC_FILE_SUFFIX
+      KAFKA_GC_LOG_OPTS="-Xloggc:$LOG_DIR/$GC_LOG_FILE_NAME -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+PrintGCTimeStamps "
     fi
 
     # Setting the classpath to all the needed dependencies.
     CLASSPATH=$CLASSPATH:/usr/share/java/scala-library.jar:/usr/share/java/jetty.jar:/usr/share/java/jetty-util.jar:/usr/share/java/zookeeper.jar:/usr/share/java/velocity-1.7.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/slf4j-api.jar:/usr/share/java/servlet-api-2.5.jar:/usr/share/java/jsp-api-2.1.jar:/usr/share/java/qdox.jar:/usr/share/java/paranamer.jar:/usr/share/java/oro.jar:/usr/share/java/objenesis.jar:/usr/share/java/log4j-1.2-1.2.16.jar:/usr/share/java/junit4.jar:/usr/share/java/joda-time.jar:/usr/share/java/jets3t.jar:/usr/share/java/jackson-core.jar:/usr/share/java/jackson-mapper.jar:/usr/share/java/hsqldb.jar:/usr/share/java/commons-cli.jar:/usr/share/java/commons-codec.jar:/usr/share/java/commons-collections.jar:/usr/share/java/commons-compress.jar:/usr/share/java/commons-el.jar:/usr/share/java/commons-httpclient.jar:/usr/share/java/commons-io.jar:/usr/share/java/commons-lang.jar:/usr/share/java/commons-logging.jar:/usr/share/java/commons-net.jar:/usr/share/java/cglib.jar:/usr/share/java/asm3.jar:/usr/share/java/snappy-java-1.0.4.1.jar:/usr/share/java/jasper-runtime-5.5.12.jar:/usr/share/java/jsp-api-2.1-6.1.14.jar:/usr/share/java/avro-1.4.0.jar:/usr/share/java/kfs-0.3.jar:/usr/share/java/jsp-2.1-6.1.14.jar:/usr/share/java/scalatest-1.2.jar:/usr/share/java/paranamer-ant-2.2.jar:/usr/share/java/paranamer-generator-2.2.jar:/usr/share/java/pig-0.8.0.jar:/usr/share/java/zkclient-0.3.jar:/usr/share/java/easymock-3.0.jar:/usr/share/java/jasper-compiler-5.5.12.jar:/usr/share/java/hadoop-core-0.20.2.jar:/usr/share/java/xmlenc-0.52.jar:/usr/share/java/jopt-simple-3.2.jar:/usr/share/kafka/kafka.jar:/usr/share/kafka/hadoop-consumer.jar:/usr/share/kafka/hadoop-producer.jar:/usr/share/kafka/kafka-kafka-examples.jar:/usr/share/kafka/kafka-perf.jar:/usr/share/java/metrics-annotation-2.2.0.jar:/usr/share/java/metrics-core-2.2.0.jar:/usr/share/java/metrics-ganglia-2.2.0.jar:/usr/share/java/metrics-graphite-2.2.0.jar:/usr/share/kafka/kafka-ganglia-1.0.0.jar
 
-    exec $JAVA $KAFKA_HEAP_OPTS $KAFKA_JVM_PERFORMANCE_OPTS $KAFKA_GC_LOG_OPTS $KAFKA_JMX_OPTS $KAFKA_LOG4J_OPTS -cp $CLASSPATH $KAFKA_OPTS "$@"
+    # Launch mode
+    if [ "x$DAEMON_MODE" = "xtrue" ]; then
+      nohup $JAVA $KAFKA_HEAP_OPTS $KAFKA_JVM_PERFORMANCE_OPTS $KAFKA_GC_LOG_OPTS $KAFKA_JMX_OPTS $KAFKA_LOG4J_OPTS -cp $CLASSPATH $KAFKA_OPTS "$@" > "$CONSOLE_OUTPUT_FILE" 2>&1 < /dev/null &
+    else
+      exec  $JAVA $KAFKA_HEAP_OPTS $KAFKA_JVM_PERFORMANCE_OPTS $KAFKA_GC_LOG_OPTS $KAFKA_JMX_OPTS $KAFKA_LOG4J_OPTS -cp $CLASSPATH $KAFKA_OPTS "$@"
+    fi
 }
 
-
-cmd_create_topic() {
-    kafka_run_class kafka.admin.CreateTopicCommand $ZOOKEEPER_OPT "$@"
-}
-
-cmd_list_topic() {
-    kafka_run_class kafka.admin.ListTopicCommand $ZOOKEEPER_OPT "$@"
+cmd_topic() {
+    kafka_run_class kafka.admin.TopicCommand $ZOOKEEPER_OPT "$@"
 }
 
 cmd_console_producer() {
@@ -212,6 +235,18 @@ cmd_simple_consumer_perf_test() {
 }
 
 cmd_server_start() {
+    EXTRA_ARGS="-name kafkaServer -loggc"
+
+    COMMAND=$1
+    case $COMMAND in
+      -daemon)
+        EXTRA_ARGS="-daemon "$EXTRA_ARGS
+        shift
+        ;;
+      *)
+        ;;
+    esac
+
     # default server.properties to $KAFKA_CONFIG/server.properties
     server_properties=${1:-"${KAFKA_CONFIG}/server.properties"}
 
@@ -219,14 +254,28 @@ cmd_server_start() {
     export KAFKA_LOG4J_OPTS="${KAFKA_LOG4J_OPTS:--Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties}"
     export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:--Xmx1G -Xms1G}"
 
-    kafka_run_class daemon kafkaServer kafka.Kafka "${server_properties}"
+    kafka_run_class "${EXTRA_ARGS}" kafka.Kafka "${server_properties}"
 }
 
 cmd_server_stop() {
-    ps ax | grep -i 'kafka\.Kafka' | grep java | grep -v grep | awk '{print $1}' | xargs kill -SIGINT
+    # kafka-server-stop.sh in Kafka repository uses SIGINT instead of SIGTERM
+    # here, but in testing SIGINT did not kill zookeeper.
+    ps ax | grep -i 'kafka\.Kafka' | grep java | grep -v grep | awk '{print $1}' | xargs kill -SIGTERM
 }
 
 cmd_zookeeper_start() {
+    EXTRA_ARGS="-name zookeeper -loggc"
+
+    COMMAND=$1
+    case "${COMMAND}" in
+      -daemon)
+         EXTRA_ARGS="-daemon ${EXTRA_ARGS}"
+         shift
+         ;;
+     *)
+         ;;
+    esac
+
     # default zookeeper.properties to $KAFKA_CONFIG/zookeeper.properties
     zookeeper_properties=${1:-"${KAFKA_CONFIG}/zookeeper.properties"}
 
@@ -234,25 +283,32 @@ cmd_zookeeper_start() {
     export KAFKA_LOG4J_OPTS="${KAFKA_LOG4J_OPTS:--Dlog4j.configuration=file:${KAFKA_CONFIG}/log4j.properties}"
     export KAFKA_HEAP_OPTS="${KAFKA_HEAP_OPTS:--Xmx512M -Xms512M}"
 
-    kafka_run_class daemon zookeeper org.apache.zookeeper.server.quorum.QuorumPeerMain "${zookeeper_properties}"
+    kafka_run_class "${EXTRA_ARGS}" org.apache.zookeeper.server.quorum.QuorumPeerMain "${zookeeper_properties}"
 }
 
 cmd_zookeeper_stop() {
-    ps ax | grep -i 'zookeeper' | grep -v grep | awk '{print $1}' | xargs kill -SIGINT
+    # zookeeper-server-stop.sh in Kafka repository uses SIGINT instead of SIGTERM
+    # here, but in testing SIGINT did not kill zookeeper.
+    ps ax | grep -i 'zookeeper' | grep -v grep | awk '{print $1}' | xargs kill -SIGTERM
 }
 
 cmd_zookeeper_shell() {
-    if [ -z "${ZOOKEEPER_URL}" -a $# -ne 1 ];
+    if [ -z "${ZOOKEEPER_URL}" -a $# -eq 0 ];
     then
-        echo "USAGE: ${SCRIPT_NAME} zookeeper-shell zookeeper_host:port[/path]"
+        echo "USAGE: ${SCRIPT_NAME} zookeeper-shell zookeeper_host:port[/path] [args...]"
         exit 1
     fi
 
     # Prefer the passed in $1 over ZOOKEEPER_URL for -server arg
-    ZOOKEEPER_URL=${1:-$ZOOKEEPER_URL}
-    kafka_run_class org.apache.zookeeper.ZooKeeperMain -server $1
-}
+    if [ -n "$1" ];
+    then
+        ARGS="-server $@"
+    else
+        ARGS="-server ${ZOOKEEPER_URL} $@"
+    fi
 
+    echo kafka_run_class org.apache.zookeeper.ZooKeeperMain $ARGS
+}
 
 
 
@@ -266,8 +322,7 @@ fi
 while test $# != 0
 do
     case "$1" in
-    create-topic                    | \
-    list-topic                      | \
+    topic                           | \
     console-producer                | \
     console-consumer                | \
     simple-consumer-shell           | \
