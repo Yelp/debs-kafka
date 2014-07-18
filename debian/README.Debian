@@ -5,3 +5,53 @@ instead of the standard sbt build system used by upstream. The reason
 for this is to satisfy debian policy that no internet connection should
 be required during package building as well as security concers about
 the downloaded JAR files by sbt
+
+How to build this package
+-------------------------
+
+This repository is be used to build the kafka package using
+git-buildpackage. Below we illustrate one of the ways this can work for
+you:
+
+* Install some mandatory packages
+  $ apt-get install git-buildpackage
+
+* And some not so mandatory but nice to have packages
+  $ apt-get install pbuilder cowbuilder
+
+Note that pbuilder/cowbuilder is not strictly required but it will save
+you from installing the dependencies manually
+
+* Create a cowbuilder environment (we assume you are building against
+precise pangolin here)
+
+  $ sudo DIST=precise git-pbuilder create --components "main universe"
+
+* Clone the repo
+  $ git clone http://gerrit.wikimedia.org/r/operations/debs/kafka
+  $ cd kafka
+
+* Should the current version in the repo not be enough, set upstream and
+  fetch
+
+  $ git remote add upstream http://git-wip-us.apache.org/repos/asf/kafka.git
+  $ git fetch upstream
+
+* Checkout the version you want to build against
+  $ git checkout debian-<VERSION>
+
+  If the current version is not enough
+  $ git checkout -b debian-<GIT_TAG> <GIT_TAG>
+
+<GIT_TAG> should be a valid git tag. You can get them via git tag
+
+* Merge the debian branch on you new branch
+  $ git merge debian
+
+* Build
+  $ DIST=precise git-buildpackage -us -uc --git-builder="git-pbuilder" \
+--git-cleaner="fakeroot debian/rules clean" \
+--git-debian-branch=debian-<VERSION>
+
+  Or assuming you don't change the debian/gbp.conf already provided
+  $ DIST=precise git-buildpackage -us -uc --git-debian-branch=debian-<VERSION>
