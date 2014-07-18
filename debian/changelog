@@ -1,3 +1,9 @@
+kafka (0.8.1.1-1yelp2) trusty; urgency=low
+
+  * Check KAFKA_START before JAVA_HOME (kafka-mirror)
+
+ -- Patrick Lucas <plucas@yelp.com>  Fri, 18 Jul 2014 14:15:35 -0700
+
 kafka (0.8.1.1-1yelp1) trusty; urgency=low
 
   * Check KAFKA_START before JAVA_HOME
