@@ -1,3 +1,11 @@
+kafka (0.8.1.1-1yelp1) trusty; urgency=low
+
+  * Check KAFKA_START before JAVA_HOME
+  * Depend on any java7 jre/jdk
+  * Use log4j-1.2 instead of log4j-1.2.16
+
+ -- Patrick Lucas <plucas@yelp.com>  Fri, 18 Jul 2014 12:45:31 -0700
+
 kafka (0.8.1.1-1) precise; urgency=low
 
   * Build new version 0.8.1.1
