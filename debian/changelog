@@ -1,3 +1,9 @@
+kafka (0.8.1.1-1yelp3) trusty; urgency=low
+
+  * Cherry-pick Build-Depends/Depends change submitted upstream
+
+ -- Patrick Lucas <plucas@yelp.com>  Mon, 21 Jul 2014 14:21:06 -0700
+
 kafka (0.8.1.1-1yelp2) trusty; urgency=low
 
   * Check KAFKA_START before JAVA_HOME (kafka-mirror)
