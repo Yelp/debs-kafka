@@ -129,14 +129,14 @@ kafka_mirror_sh() {
 
 case "$1" in
   start)
-	if [ -z "$JAVA_HOME" ]; then
-		log_failure_msg "no JDK found - please set JAVA_HOME"
-		exit 1
-	fi
-
 	if [ -n "$KAFKA_MIRROR_START" -a "$KAFKA_MIRROR_START" != "yes" ]; then
 		log_failure_msg "KAFKA_MIRROR_START not set to 'yes' in $DEFAULT, not starting"
 		exit 0
+	fi
+
+	if [ -z "$JAVA_HOME" ]; then
+		log_failure_msg "no JDK found - please set JAVA_HOME"
+		exit 1
 	fi
 
 	#
