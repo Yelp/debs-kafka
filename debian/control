@@ -2,8 +2,8 @@ Source: kafka
 Section: misc
 Priority: optional
 Maintainer: Alexandros Kosiaris <akosiaris@wikimedia.org>
-Build-Depends: debhelper (>= 9), java7-jdk, javahelper (>= 0.40),
- scalac,
+Build-Depends: debhelper (>= 9), openjdk-7-jdk | java7-jdk, javahelper (>= 0.40),
+ scala,
  junit4,
  velocity,
  libasm3-java,
@@ -38,7 +38,7 @@ Homepage: http://kafka.apache.org
 
 Package: kafka
 Architecture: all
-Depends: java7-runtime, scala-library, adduser, ${java:Depends}, ${misc:Depends}
+Depends: openjdk-7-jre | java7-runtime, scala-library, adduser, ${java:Depends}, ${misc:Depends}
 Recommends: ${java:Recommends}
 Description: Apache Kafka is a distributed publish-subscribe messaging system
  Apache Kafka is designed to support the following
